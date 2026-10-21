@@ -62,10 +62,14 @@ It sends nothing anywhere else. The screensaver page has no network access. The 
 
 ## Installation
 
+Use the button below to open Nightstand Clock in your Kiosk Satellite and install it.
+
+[![Install in Kiosk Satellite](https://kiosksatellite.com/img/badges/plugin-add.svg)](https://kiosksatellite.com/redirect/plugin/?repository=taclab/nightstand-clock)
+
 ### Manual
 
 1. Open **Settings > Plugin Manager** in Kiosk Satellite and turn on **Enable Plugins**.
-2. Choose **Add plugin**, paste `https://github.com/OWNER/nightstand-clock` and choose **Preview**.
+2. Choose **Add plugin**, paste `https://github.com/taclab/nightstand-clock` and choose **Preview**.
 3. Review the plugin and choose **Trust and install**, then enable it from its entry row.
 
 ### Local build
