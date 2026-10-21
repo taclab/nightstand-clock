@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "id": "nightstand-clock",
+  "name": "Nightstand Clock",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "minAndroidSdk": 24,
+  "entryClass": "nightstand.clock.NightstandClockPlugin",
+  "description": "A bedside clock screensaver inspired by the landscape charging mode of phones: an analog or digital clock with a calendar, the weather or the date beside it, or one clock across the whole screen. Colors, time format and a red night mode are configurable.",
+  "author": "Mehdi",
+  "license": "Apache-2.0",
+  "capabilities": [
+    "screensaver",
+    "host.read",
+    "ha"
+  ],
+  "icon": "icon.png",
+  "settings": [
+    {
+      "key": "layout",
+      "type": "select",
+      "title": "Layout",
+      "default": "Clock and widget",
+      "options": ["Clock and widget", "Full screen clock"],
+      "group": "Layout",
+      "description": "A clock with a widget beside it, or one clock across the whole screen."
+    },
+    {
+      "key": "clockStyle",
+      "type": "select",
+      "title": "Clock",
+      "default": "Analog",
+      "options": ["Analog", "Analog round", "Digital"],
+      "group": "Layout",
+      "description": "Analog has a rounded square dial, Analog round a circular one with every hour, Digital large numbers inside a ring of seconds.",
+      "visibleWhen": { "key": "layout", "equals": "Clock and widget" }
+    },
+    {
+      "key": "widget",
+      "type": "select",
+      "title": "Widget",
+      "default": "Calendar",
+      "options": ["Calendar", "Weather", "Date", "None"],
+      "group": "Layout",
+      "description": "What shows beside the clock. None centers the clock alone.",
+      "visibleWhen": { "key": "layout", "equals": "Clock and widget" }
+    },
+    {
+      "key": "fullscreenStyle",
+      "type": "select",
+      "title": "Full screen clock",
+      "default": "Analog",
+      "options": ["Analog", "Digital"],
+      "group": "Layout",
+      "description": "Analog draws its ticks out to the edges of the screen with the date inside the dial. Digital shows large numbers under the date.",
+      "visibleWhen": { "key": "layout", "equals": "Full screen clock" }
+    },
+    {
+      "key": "showSeconds",
+      "type": "boolean",
+      "title": "Show seconds",
+      "default": true,
+      "group": "Time and date",
+      "description": "The sweeping second hand on analog clocks and the ring of seconds around the digital clock."
+    },
+    {
+      "key": "timeFormat",
+      "type": "select",
+      "title": "Time format",
+      "default": "Automatic",
+      "options": ["Automatic", "24-hour", "12-hour"],
+      "group": "Time and date",
+      "description": "Automatic follows the language."
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "title": "Language",
+      "default": "Automatic",
+      "options": ["Automatic", "English", "Français", "Deutsch", "Español", "Italiano", "Português", "Nederlands"],
+      "group": "Time and date",
+      "description": "Month, weekday and weather names. Automatic follows the device."
+    },
+    {
+      "key": "weekStart",
+      "type": "select",
+      "title": "First day of the week",
+      "default": "Automatic",
+      "options": ["Automatic", "Monday", "Sunday", "Saturday"],
+      "group": "Time and date",
+      "description": "Used by the calendar. Automatic follows the language and region."
+    },
+    {
+      "key": "primaryColor",
+      "type": "color",
+      "title": "Main color",
+      "default": "#FFFFFF",
+      "group": "Colors",
+      "description": "Hands, numbers, ticks and text."
+    },
+    {
+      "key": "accentColor",
+      "type": "color",
+      "title": "Accent color",
+      "default": "#FF3B30",
+      "group": "Colors",
+      "description": "Month name, today in the calendar and the date."
+    },
+    {
+      "key": "secondsColor",
+      "type": "color",
+      "title": "Second hand color",
+      "default": "#FF9F0A",
+      "group": "Colors"
+    },
+    {
+      "key": "backgroundColor",
+      "type": "color",
+      "title": "Background color",
+      "default": "#000000",
+      "group": "Colors",
+      "description": "Keep it black on OLED screens."
+    },
+    {
+      "key": "weatherEntity",
+      "type": "entity",
+      "title": "Weather entity",
+      "default": "",
+      "group": "Weather",
+      "description": "A weather entity from Home Assistant, such as weather.home. Used by the Weather widget."
+    },
+    {
+      "key": "weatherName",
+      "type": "string",
+      "title": "Place name",
+      "default": "",
+      "group": "Weather",
+      "description": "Shown above the temperature. Empty uses the entity's name."
+    },
+    {
+      "key": "nightMode",
+      "type": "select",
+      "title": "Night mode",
+      "default": "Off",
+      "options": ["Off", "Always", "Schedule", "Home Assistant entity"],
+      "group": "Night mode",
+      "description": "Draws everything in one dim color, red by default, so the screen does not light up the room."
+    },
+    {
+      "key": "nightStart",
+      "type": "number",
+      "title": "Night starts at",
+      "default": 22,
+      "min": 0,
+      "max": 23,
+      "step": 1,
+      "group": "Night mode",
+      "description": "Hour of the day, from 0 to 23.",
+      "visibleWhen": { "key": "nightMode", "equals": "Schedule" }
+    },
+    {
+      "key": "nightEnd",
+      "type": "number",
+      "title": "Night ends at",
+      "default": 7,
+      "min": 0,
+      "max": 23,
+      "step": 1,
+      "group": "Night mode",
+      "description": "Hour of the day, from 0 to 23.",
+      "visibleWhen": { "key": "nightMode", "equals": "Schedule" }
+    },
+    {
+      "key": "nightEntity",
+      "type": "entity",
+      "title": "Night entity",
+      "default": "",
+      "group": "Night mode",
+      "description": "Night mode follows it: on, true and below_horizon (sun.sun) mean night. A numeric entity, such as an illuminance sensor, means night below the threshold.",
+      "visibleWhen": { "key": "nightMode", "equals": "Home Assistant entity" }
+    },
+    {
+      "key": "nightThreshold",
+      "type": "number",
+      "title": "Darkness threshold",
+      "default": 10,
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "group": "Night mode",
+      "description": "For a numeric night entity: night below this value, in the entity's unit.",
+      "visibleWhen": { "key": "nightMode", "equals": "Home Assistant entity" }
+    },
+    {
+      "key": "nightColor",
+      "type": "color",
+      "title": "Night color",
+      "default": "#FF2A1F",
+      "group": "Night mode",
+      "visibleWhen": { "key": "nightMode", "notEquals": "Off" }
+    },
+    {
+      "key": "nightBrightness",
+      "type": "number",
+      "title": "Night brightness",
+      "default": 70,
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "group": "Night mode",
+      "description": "Percent. Dims the clock on top of the screensaver brightness.",
+      "visibleWhen": { "key": "nightMode", "notEquals": "Off" }
+    }
+  ],
+  "commands": []
+}

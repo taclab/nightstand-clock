@@ -1,0 +1,76 @@
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 800;
+  src: url('fonts/inter-latin.woff2') format('woff2');
+}
+:root {
+  --primary: var(--user-primary, #FFFFFF);
+  --accent: var(--user-accent, #FF3B30);
+  --seconds: var(--user-seconds, #FF9F0A);
+  --today-text: #FFFFFF;
+}
+:root.night {
+  --primary: var(--night);
+  --accent: var(--night);
+  --seconds: var(--night);
+  --today-text: var(--background);
+}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--primary);
+  font-family: 'Inter', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+#root {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4vmin;
+  padding: 4vmin;
+  box-sizing: border-box;
+  transition: opacity 1.5s ease;
+}
+:root.night #root { opacity: var(--night-opacity, 0.7); }
+.panel {
+  flex: 0 0 auto;
+  width: min(46vw - 6vmin, 100vh - 8vmin);
+  height: min(46vw - 6vmin, 100vh - 8vmin);
+}
+@media (orientation: portrait) {
+  #root { flex-direction: column; }
+  .panel {
+    width: min(100vw - 8vmin, 46vh - 6vmin);
+    height: min(100vw - 8vmin, 46vh - 6vmin);
+  }
+}
+#root.alone .panel {
+  width: min(100vw - 8vmin, 100vh - 8vmin);
+  height: min(100vw - 8vmin, 100vh - 8vmin);
+}
+#root.alone #widget, #root.full #widget { display: none; }
+#root.full { padding: 0; }
+#root.full #clock { width: 100vw; height: 100vh; }
+svg { display: block; width: 100%; height: 100%; overflow: visible; }
+text { font-family: inherit; font-variant-numeric: tabular-nums; }
+.fill { fill: var(--primary); }
+.stroke { stroke: var(--primary); }
+.accent { fill: var(--accent); }
+.accent-stroke { stroke: var(--accent); }
+.seconds { fill: var(--seconds); }
+.seconds-stroke { stroke: var(--seconds); }
+.background { fill: var(--background); }
+.today-text { fill: var(--today-text); }
+.dim { opacity: 0.38; }
+.faint { opacity: 0.22; }
+.off { opacity: 0.16; }
