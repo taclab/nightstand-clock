@@ -144,7 +144,7 @@
   }
 
   /** Hour, minute and second hands around (0, 0), sized by the dial radius. */
-  function hands(parent, radius) {
+  function hands(parent, radius, minuteLength) {
     function hand(length, width) {
       var group = add(parent, 'g', {});
       add(group, 'line', { x1: 0, y1: 0, x2: 0, y2: -radius * 0.13, 'stroke-width': width * 0.38, 'class': 'stroke' });
@@ -153,8 +153,8 @@
       });
       return group;
     }
-    var hour = hand(radius * 0.5, radius * 0.064);
-    var minute = hand(radius * 0.84, radius * 0.064);
+    var hour = hand(radius * 0.52, radius * 0.054);
+    var minute = hand(radius * (minuteLength || 0.84), radius * 0.054);
     add(parent, 'circle', { r: radius * 0.048, 'class': 'fill' });
     var second = null;
     if (o.seconds) {
@@ -190,7 +190,7 @@
         if (i % 15 === 0) {
           ray(root, angle, r - 13, r, 3, 'stroke');
           var at = point(angle, r - 39);
-          text(root, at[0], at[1], String(i / 5 || 12), 36, 600, 'fill');
+          text(root, at[0], at[1], String(i / 5 || 12), 36, 600, 'fill dial');
         } else if (i % 5 === 0) {
           ray(root, angle, r - 24, r, 3, 'stroke');
         } else {
@@ -200,22 +200,20 @@
       return hands(root, 94);
     },
     'analog-round': function (panel) {
-      var root = svg(panel, '-100 -100 200 200');
+      // Proportions measured on the phone's own dial: even ticks with the hours in white, numerals on one circle
+      // with room to breathe, and two digit hours drawn in a little where their width points at the ticks. The wider
+      // view box leaves a margin around the dial.
+      var root = svg(panel, '-108 -108 216 216');
       for (var i = 0; i < 60; i++) {
         var angle = i * Math.PI / 30;
+        ray(root, angle, 91.5, 98, 2.2, i % 5 === 0 ? 'stroke' : 'stroke dim');
         if (i % 5 === 0) {
-          ray(root, angle, 89, 98, 2.6, 'stroke');
-          // Two digit numerals are twice as wide. Pull each one in by its own extent toward the ticks so every
-          // numeral keeps the same gap to them. Inter's digits are about 0.62 em wide and 0.72 em tall.
-          var label = String(i / 5 || 12), size = 24;
-          var reach = Math.abs(Math.sin(angle)) * label.length * size * 0.31 + Math.abs(Math.cos(angle)) * size * 0.36;
-          var at = point(angle, 89 - 7 - reach);
-          text(root, at[0], at[1], label, size, 600, 'fill');
-        } else {
-          ray(root, angle, 93, 98, 1.2, 'stroke dim');
+          var label = String(i / 5 || 12);
+          var at = point(angle, label.length > 1 ? 74.5 - 4.5 * Math.abs(Math.sin(angle)) : 76);
+          text(root, at[0], at[1], label, 23, 600, 'fill dial');
         }
       }
-      return hands(root, 94);
+      return hands(root, 94, 0.94);
     },
     'digital': function (panel) {
       var root = svg(panel, '-100 -100 200 200');
@@ -252,7 +250,7 @@
         if (i % 15 === 0) {
           ray(center, angle, r * 0.72, r, 3.2 * stroke, 'stroke');
           var at = point(angle, r * 0.56);
-          text(center, at[0], at[1], String(i / 5 || 12), small * 0.27, 600, 'fill');
+          text(center, at[0], at[1], String(i / 5 || 12), small * 0.27, 600, 'fill dial');
         } else if (i % 5 === 0) {
           ray(center, angle, r * 0.6, r, 2.6 * stroke, 'stroke');
         } else {
@@ -344,7 +342,7 @@
     'calendar': function (panel, now) {
       var root = svg(panel, '0 0 200 200');
       var column = 200 / 7, year = now.getFullYear(), month = now.getMonth();
-      text(root, column / 2 - 7, 14, upper(format(now, { month: 'long' })), 18, 700, 'accent', 'start');
+      text(root, column / 2 - 7, 14, upper(format(now, { month: 'long' })), 18, 600, 'accent', 'start');
       for (var c = 0; c < 7; c++) {
         var weekday = (firstDay + c) % 7, x = column * (c + 0.5);
         var sample = new Date(2023, 0, 1 + weekday); // 1 January 2023 was a Sunday.
@@ -358,9 +356,9 @@
         var dayOfWeek = new Date(year, month, d).getDay();
         if (d === now.getDate()) {
           add(root, 'circle', { cx: cx, cy: cy, r: 12, 'class': 'accent' });
-          text(root, cx, cy, String(d), 15, 700, 'today-text');
+          text(root, cx, cy, String(d), 15, 600, 'today-text');
         } else {
-          text(root, cx, cy, String(d), 15, 600, 'fill' + (dayOfWeek % 6 === 0 ? ' dim' : ''));
+          text(root, cx, cy, String(d), 15, 500, 'fill' + (dayOfWeek % 6 === 0 ? ' dim' : ''));
         }
       }
     },

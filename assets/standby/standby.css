@@ -65,7 +65,11 @@ html, body {
 #root.full { padding: 0; }
 #root.full #clock { width: 100vw; height: 100vh; }
 svg { display: block; width: 100%; height: 100%; overflow: visible; }
-text { font-family: inherit; font-variant-numeric: tabular-nums; }
+/* Inter's display cut is tighter and finer, closer to the large clock numerals of a phone. SVG text sizes are
+   in viewBox units, so the browser would otherwise pick the small text cut. */
+text { font-family: inherit; font-variant-numeric: tabular-nums; font-variation-settings: 'opsz' 32; }
+/* Dial numerals use proportional digits, so 11 is as narrow as it looks on a watch. */
+text.dial { font-variant-numeric: proportional-nums; letter-spacing: -0.02em; }
 .fill { fill: var(--primary); }
 .stroke { stroke: var(--primary); }
 .accent { fill: var(--accent); }

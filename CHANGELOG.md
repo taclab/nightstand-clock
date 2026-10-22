@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Analog round redrawn after the phone's own dial: even ticks with the hours in white, numerals on one circle with more room around them, two digit hours drawn in only slightly, and a margin around the dial.
+- Inter's display cut for every clock and widget, finer and tighter at large sizes. Dial numerals use proportional digits, so 11 is narrow.
+- Thinner hands, a longer minute hand on the round dial, and a lighter calendar.
+
 ## 1.1.1
 
 - Analog round: 10, 11 and 12 keep the same gap to the ticks as the single digit hours instead of touching them.
