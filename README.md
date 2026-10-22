@@ -77,7 +77,7 @@ It sends nothing anywhere else. The screensaver page has no network access. The 
 
 ## Tested on
 
-- Echo Show 5 (2nd generation), 960 × 480, with Kiosk Satellite and SDK 1.
+- Echo Show 5 (1st and 2nd generation), 960 × 480, with Kiosk Satellite and SDK 1.
 - Desktop Chrome at 960 × 480 and 480 × 960 for the screenshots.
 
 The page needs a WebView based on Chrome 79 or newer, for CSS `min()`. Older Android 7 devices that never updated their WebView may not lay it out correctly. Please include the device, the Kiosk Satellite version and the WebView version (**Settings > Apps > Android System WebView**) when reporting a problem, with the plugin's settings.
