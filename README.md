@@ -2,8 +2,6 @@
 
 A bedside clock screensaver for [Kiosk Satellite](https://github.com/jxlarrea/kiosk-satellite), inspired by the landscape "standby" mode of phones on a charger: a large clock on the left with a calendar, the weather or the date on the right, or a single clock across the whole screen. A red night mode keeps the room dark.
 
-Not affiliated with Apple.
-
 ## Screenshots
 
 Captured at 960 × 480, the screen of an Echo Show 5 (2nd generation).
