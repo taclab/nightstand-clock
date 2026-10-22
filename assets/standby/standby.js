@@ -205,8 +205,12 @@
         var angle = i * Math.PI / 30;
         if (i % 5 === 0) {
           ray(root, angle, 89, 98, 2.6, 'stroke');
-          var at = point(angle, 75);
-          text(root, at[0], at[1], String(i / 5 || 12), 25, 600, 'fill');
+          // Two digit numerals are twice as wide. Pull each one in by its own extent toward the ticks so every
+          // numeral keeps the same gap to them. Inter's digits are about 0.62 em wide and 0.72 em tall.
+          var label = String(i / 5 || 12), size = 24;
+          var reach = Math.abs(Math.sin(angle)) * label.length * size * 0.31 + Math.abs(Math.cos(angle)) * size * 0.36;
+          var at = point(angle, 89 - 7 - reach);
+          text(root, at[0], at[1], label, size, 600, 'fill');
         } else {
           ray(root, angle, 93, 98, 1.2, 'stroke dim');
         }

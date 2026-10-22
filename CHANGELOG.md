@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- Analog round: 10, 11 and 12 keep the same gap to the ticks as the single digit hours instead of touching them.
+
 ## 1.1.0
 
 - A sensor flickering around the night threshold, or a burst of Home Assistant updates, can no longer disable the plugin. Screensaver updates stay within Kiosk Satellite's budget of four a second, and the latest state is published a moment later.
