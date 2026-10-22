@@ -49,19 +49,19 @@ Kiosk Satellite still decides when the screensaver starts and stops, its brightn
 | | Widget | Calendar, Weather, Date or None |
 | | Full screen clock | Analog or Digital |
 | Time and date | Show seconds | Second hand on analog clocks, the ring of seconds on the digital one |
-| | Time format | Automatic, 24-hour or 12-hour |
+| | Time format | Automatic, 24-hour or 12-hour. Automatic follows the language, not Android's separate 12/24-hour switch |
 | | Language | Month, weekday and weather names: Automatic (device), English, Français, Deutsch, Español, Italiano, Português, Nederlands |
 | | First day of the week | Automatic, Monday, Sunday or Saturday |
 | Colors | Main color | Hands, numbers, ticks and text. White by default |
 | | Accent color | Month name, today and the date. Red by default |
 | | Second hand color | Orange by default |
-| | Background color | Black by default, best on OLED screens |
+| | Background color | Black by default, best on OLED screens. Night mode always uses black |
 | Weather | Weather entity | A Home Assistant `weather.*` entity for the Weather widget |
 | | Place name | Shown above the temperature. Empty uses the entity's name |
 | Night mode | Night mode | Off, Always, Schedule or Home Assistant entity |
 | | Night starts at / ends at | Hours for Schedule, such as 22 to 7 |
-| | Night entity | Night while it is `on`, `true` or `below_horizon` (`sun.sun`). For a number, such as an illuminance sensor, night below the threshold |
-| | Darkness threshold | For a numeric night entity |
+| | Night entity | Night while it is `on`, `true` or `below_horizon` (`sun.sun`). For a number, such as an illuminance sensor, night below the threshold. While the entity is unavailable, night mode keeps its last state |
+| | Darkness threshold | For a numeric night entity. Night ends once the value climbs 10% above the threshold (at least 1), so a flickering sensor does not switch back and forth |
 | | Night color | Everything is drawn in this color at night. Red by default |
 | | Night brightness | Dims the clock further at night, in percent |
 
@@ -71,9 +71,16 @@ The plugin declares three capabilities:
 
 - `screensaver` to draw the clock.
 - `host.read` to follow the weather entity and the night entity through Kiosk Satellite's own Home Assistant connection.
-- `ha` to call `weather.get_forecasts` for today's high and low, at most twice an hour, when the weather entity has no forecast attribute.
+- `ha` to call `weather.get_forecasts` for today's high and low when the weather entity has no forecast attribute: every 30 minutes, or every 5 minutes while there is no entry for today, such as just after midnight. The high and the low disappear once their day is over.
 
 It sends nothing anywhere else. The screensaver page has no network access. The Inter font is bundled under the SIL Open Font License (`assets/standby/fonts/OFL.txt`).
+
+## Tested on
+
+- Echo Show 5 (2nd generation), 960 × 480, with Kiosk Satellite and SDK 1.
+- Desktop Chrome at 960 × 480 and 480 × 960 for the screenshots.
+
+The page needs a WebView based on Chrome 79 or newer, for CSS `min()`. Older Android 7 devices that never updated their WebView may not lay it out correctly. Please include the device, the Kiosk Satellite version and the WebView version (**Settings > Apps > Android System WebView**) when reporting a problem, with the plugin's settings.
 
 ## Installation
 

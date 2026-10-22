@@ -8,12 +8,15 @@
   --primary: var(--user-primary, #FFFFFF);
   --accent: var(--user-accent, #FF3B30);
   --seconds: var(--user-seconds, #FF9F0A);
+  --background: var(--user-background, #000000);
   --today-text: #FFFFFF;
 }
 :root.night {
   --primary: var(--night);
   --accent: var(--night);
   --seconds: var(--night);
+  /* The point of night mode is a dark room, whatever the day background. */
+  --background: #000000;
   --today-text: var(--background);
 }
 html, body {

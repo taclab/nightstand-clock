@@ -1,0 +1,21 @@
+# Changelog
+
+## 1.1.0
+
+- A sensor flickering around the night threshold, or a burst of Home Assistant updates, can no longer disable the plugin. Screensaver updates stay within Kiosk Satellite's budget of four a second, and the latest state is published a moment later.
+- Night mode now ends only once a numeric entity climbs 10% above the threshold, and keeps its last state while the entity is unavailable.
+- Changing the darkness threshold applies at once, without waiting for the sensor's next reading.
+- Night mode always uses a black background, even with a light day background.
+- The weather high and low come from today's forecast entry, picked by its date, and disappear once their day is over. The forecast refreshes every 30 minutes even when the weather entity does not change.
+- The full screen clocks no longer format the date on every frame.
+- Tests run on every push and pull request.
+
+## 1.0.1
+
+- The clock and widget fill wide 2:1 screens such as the Echo Show 5, without black bands on the sides.
+- The digital time fits inside its ring, and the full screen analog date is larger.
+- README screenshots.
+
+## 1.0.0
+
+- First release.

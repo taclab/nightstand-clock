@@ -30,7 +30,7 @@
   style.setProperty('--user-primary', color(options.primary, '#FFFFFF'));
   style.setProperty('--user-accent', color(options.accent, '#FF3B30'));
   style.setProperty('--user-seconds', color(options.secondsColor, '#FF9F0A'));
-  style.setProperty('--background', color(options.background, '#000000'));
+  style.setProperty('--user-background', color(options.background, '#000000'));
   style.setProperty('--night', color(options.nightColor, '#FF2A1F'));
   style.setProperty('--night-opacity', Math.max(20, Math.min(100, number(options.nightBrightness, 70))) / 100);
 
@@ -38,8 +38,18 @@
   var locale = typeof options.locale === 'string' && options.locale ? options.locale : (navigator.language || 'en');
   try { new Intl.DateTimeFormat(locale); } catch (_) { locale = 'en'; }
   var language = locale.slice(0, 2).toLowerCase();
+  // Building a formatter costs far more than using one, and the full screen analog clock asks every frame.
+  var formatters = {};
   function format(date, fields) {
-    return new Intl.DateTimeFormat(locale, fields).format(date);
+    var key = JSON.stringify(fields);
+    return (formatters[key] || (formatters[key] = new Intl.DateTimeFormat(locale, fields))).format(date);
+  }
+  function capitalized(text) {
+    return text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
+  }
+  function isoDate(date) {
+    var month = date.getMonth() + 1, day = date.getDate();
+    return date.getFullYear() + '-' + (month < 10 ? '0' : '') + month + '-' + (day < 10 ? '0' : '') + day;
   }
   function upper(text) {
     return text.replace(/\.$/, '').toLocaleUpperCase(locale);
@@ -250,8 +260,11 @@
       date.setAttribute('letter-spacing', small * 0.004);
       var move = hands(center, small * 1.05), day = '';
       return function (now) {
-        var today = upper(format(now, { weekday: 'short' })) + ' ' + now.getDate();
-        if (today !== day) date.textContent = day = today;
+        var today = now.toDateString();
+        if (today !== day) {
+          day = today;
+          date.textContent = upper(format(now, { weekday: 'short' })) + ' ' + now.getDate();
+        }
         move(now);
       };
     },
@@ -264,9 +277,12 @@
       label.setAttribute('letter-spacing', -size * 0.03);
       var shown = '', day = '';
       return function (now) {
-        var value = time(now), today = format(now, { weekday: 'long', day: 'numeric', month: 'long' });
+        var value = time(now), today = now.toDateString();
         if (value !== shown) label.textContent = shown = value;
-        if (today !== day) date.textContent = day = today.charAt(0).toLocaleUpperCase(locale) + today.slice(1);
+        if (today !== day) {
+          day = today;
+          date.textContent = capitalized(format(now, { weekday: 'long', day: 'numeric', month: 'long' }));
+        }
       };
     }
   };
@@ -349,9 +365,9 @@
       text(root, 6, 34, upper(format(now, { weekday: 'long' })), 21, 700, 'accent', 'start');
       text(root, 0, 108, String(now.getDate()), 124, 600, 'fill', 'start').setAttribute('letter-spacing', '-5');
       var month = format(now, { month: 'long', year: 'numeric' });
-      text(root, 6, 178, month.charAt(0).toLocaleUpperCase(locale) + month.slice(1), 21, 600, 'fill dim', 'start');
+      text(root, 6, 178, capitalized(month), 21, 600, 'fill dim', 'start');
     },
-    'weather': function (panel) {
+    'weather': function (panel, now) {
       var root = svg(panel, '0 0 200 200');
       if (options.weatherConfigured !== true) {
         text(root, 6, 22, word('weather'), 17, 700, 'fill', 'start');
@@ -367,7 +383,8 @@
       var condition = typeof options.weatherCondition === 'string' ? options.weatherCondition : '';
       if (condition) weatherIcon(root, condition, 6, 134, 26);
       text(root, 6, 174, conditionName(condition), 17, 700, 'fill', 'start');
-      if (typeof options.weatherHigh === 'number' && typeof options.weatherLow === 'number') {
+      // The plugin sends the day its high and low belong to. They go once that day is over.
+      if (options.weatherDate === isoDate(now) && typeof options.weatherHigh === 'number' && typeof options.weatherLow === 'number') {
         text(root, 6, 194, word('high') + Math.round(options.weatherHigh) + '° ' + word('low') + Math.round(options.weatherLow) + '°', 17, 700, 'fill', 'start');
       }
     }

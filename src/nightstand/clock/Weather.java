@@ -1,60 +1,82 @@
 // SPDX-License-Identifier: Apache-2.0
 package nightstand.clock;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /** The few weather fields the page shows, read from Home Assistant snapshots and forecasts. */
 final class Weather {
+    /** One day of a daily forecast. The date is the yyyy-MM-dd the provider wrote in the entry's datetime. */
+    static final class Day {
+        final String date;
+        final Double high;
+        final Double low;
+
+        Day(String date, Double high, Double low) {
+            this.date = date;
+            this.high = high;
+            this.low = low;
+        }
+    }
+
     final String name;
     final String condition;
     final Double temperature;
     final String unit;
-    final Double high;
-    final Double low;
+    /** Today from the entity's own forecast attribute, which only older integrations still fill. */
+    final Day today;
 
-    Weather(String name, String condition, Double temperature, String unit, Double high, Double low) {
+    Weather(String name, String condition, Double temperature, String unit, Day today) {
         this.name = name;
         this.condition = condition;
         this.temperature = temperature;
         this.unit = unit;
-        this.high = high;
-        this.low = low;
+        this.today = today;
     }
 
-    Weather withForecast(Double high, Double low) {
-        return new Weather(name, condition, temperature, unit, high, low);
+    /** Today's date on the device, as forecast entries spell it. */
+    static String localDate(long millis) {
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date(millis));
     }
 
     /** A ks.ha.entity snapshot, or null when HA has no current state for it. */
-    static Weather fromSnapshot(Map<String, Object> snapshot) {
+    static Weather fromSnapshot(Map<String, Object> snapshot, String today) {
         if (snapshot == null || !"available".equals(snapshot.get("status"))) return null;
         Object state = snapshot.get("state");
         Map<?, ?> attributes = snapshot.get("attributes") instanceof Map ? (Map<?, ?>) snapshot.get("attributes") : null;
         if (!(state instanceof String) || attributes == null) return null;
-        Double[] today = today(attributes.get("forecast"));
         return new Weather(string(attributes.get("friendly_name")), (String) state,
-            number(attributes.get("temperature")), string(attributes.get("temperature_unit")), today[0], today[1]);
+            number(attributes.get("temperature")), string(attributes.get("temperature_unit")), day(attributes.get("forecast"), today));
     }
 
-    /** The response of weather.get_forecasts for one entity: today's high and low, or nulls. */
-    static Double[] fromForecastResponse(Object result, String entityId) {
-        if (!(result instanceof Map)) return new Double[2];
+    /** The response of weather.get_forecasts for one entity: the entry for today, or null. */
+    static Day fromForecastResponse(Object result, String entityId, String today) {
+        if (!(result instanceof Map)) return null;
         Object response = ((Map<?, ?>) result).get("response");
-        if (!(response instanceof Map)) return new Double[2];
+        if (!(response instanceof Map)) return null;
         Object entity = ((Map<?, ?>) response).get(entityId);
-        return entity instanceof Map ? today(((Map<?, ?>) entity).get("forecast")) : new Double[2];
+        return entity instanceof Map ? day(((Map<?, ?>) entity).get("forecast"), today) : null;
     }
 
-    /** The first daily entry has the high in temperature and the low in templow. */
-    static Double[] today(Object forecast) {
-        Double[] result = new Double[2];
-        if (!(forecast instanceof List) || ((List<?>) forecast).isEmpty()) return result;
-        Object first = ((List<?>) forecast).get(0);
-        if (!(first instanceof Map)) return result;
-        result[0] = number(((Map<?, ?>) first).get("temperature"));
-        result[1] = number(((Map<?, ?>) first).get("templow"));
-        return result;
+    /**
+     * The daily entry whose datetime starts with today's date. Providers write the day an entry is about, such as
+     * 2026-10-22T00:00:00+00:00 or 2026-10-22T12:00:00-05:00, so the date is read as written, not converted. An entry
+     * without the high and the low counts as missing.
+     */
+    static Day day(Object forecast, String today) {
+        if (!(forecast instanceof List)) return null;
+        for (Object entry : (List<?>) forecast) {
+            if (!(entry instanceof Map)) continue;
+            Object datetime = ((Map<?, ?>) entry).get("datetime");
+            if (!(datetime instanceof String) || !((String) datetime).startsWith(today)) continue;
+            Double high = number(((Map<?, ?>) entry).get("temperature"));
+            Double low = number(((Map<?, ?>) entry).get("templow"));
+            return high == null || low == null ? null : new Day(today, high, low);
+        }
+        return null;
     }
 
     static Double number(Object value) {
