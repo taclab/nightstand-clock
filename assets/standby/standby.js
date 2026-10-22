@@ -210,7 +210,7 @@
         var angle = i * Math.PI / 30, r = edge(angle, 98, 98, 4.6);
         ticks.push(ray(root, angle, r - 9, r, 3, 'stroke ' + (o.seconds ? 'off' : 'faint')));
       }
-      var label = text(root, 0, 2, '', 64, 700, 'fill');
+      var label = text(root, 0, 2, '', 54, 700, 'fill');
       label.setAttribute('letter-spacing', '-2');
       var shown = '', lit = -1;
       return function (now) {
@@ -218,7 +218,7 @@
         if (value !== shown) {
           shown = value;
           label.textContent = value;
-          label.setAttribute('font-size', value.length > 4 ? 64 : 76);
+          label.setAttribute('font-size', value.length > 4 ? 54 : 66);
         }
         if (!o.seconds) return;
         var second = now.getSeconds();
@@ -245,7 +245,8 @@
           ray(center, angle, r * 0.92, r, 1.3 * stroke, 'stroke dim');
         }
       }
-      var date = text(center, a * 0.34, 0, '', small * 0.085, 600, 'accent', 'start');
+      // Ends a little before the 3, which sits at 56% of the half width.
+      var date = text(center, a * 0.56 - small * 0.22, 0, '', small * 0.11, 600, 'accent', 'end');
       date.setAttribute('letter-spacing', small * 0.004);
       var move = hands(center, small * 1.05), day = '';
       return function (now) {

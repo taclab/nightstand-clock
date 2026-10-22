@@ -44,14 +44,14 @@ html, body {
 :root.night #root { opacity: var(--night-opacity, 0.7); }
 .panel {
   flex: 0 0 auto;
-  width: min(46vw - 6vmin, 100vh - 8vmin);
-  height: min(46vw - 6vmin, 100vh - 8vmin);
+  width: min(50vw - 6vmin, 100vh - 8vmin);
+  height: min(50vw - 6vmin, 100vh - 8vmin);
 }
 @media (orientation: portrait) {
   #root { flex-direction: column; }
   .panel {
-    width: min(100vw - 8vmin, 46vh - 6vmin);
-    height: min(100vw - 8vmin, 46vh - 6vmin);
+    width: min(100vw - 8vmin, 50vh - 6vmin);
+    height: min(100vw - 8vmin, 50vh - 6vmin);
   }
 }
 #root.alone .panel {

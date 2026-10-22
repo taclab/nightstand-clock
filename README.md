@@ -4,6 +4,23 @@ A bedside clock screensaver for [Kiosk Satellite](https://github.com/jxlarrea/ki
 
 Not affiliated with Apple.
 
+## Screenshots
+
+Captured at 960 × 480, the screen of an Echo Show 5 (2nd generation).
+
+| | |
+| --- | --- |
+| ![Analog clock and calendar](docs/screenshots/analog-calendar.png) | ![Analog clock and weather](docs/screenshots/analog-weather.png) |
+| Analog, Calendar | Analog, Weather |
+| ![Round analog clock and calendar](docs/screenshots/round-calendar.png) | ![Round analog clock and date](docs/screenshots/round-date.png) |
+| Analog round, Calendar (Monday first) | Analog round, Date (Français) |
+| ![Digital clock and calendar](docs/screenshots/digital-calendar.png) | ![Digital clock and weather](docs/screenshots/digital-weather.png) |
+| Digital, Calendar with custom colors | Digital, Weather (Français) |
+| ![Full screen analog clock](docs/screenshots/full-analog.png) | ![Full screen digital clock](docs/screenshots/full-digital.png) |
+| Full screen Analog | Full screen Digital |
+| ![Analog clock and calendar at night](docs/screenshots/analog-calendar-night.png) | ![Full screen analog clock at night](docs/screenshots/full-analog-night.png) |
+| Night mode | Night mode, full screen |
+
 ## Looks
 
 | Layout | Clock | Beside it |
