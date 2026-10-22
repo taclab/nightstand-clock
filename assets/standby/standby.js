@@ -342,11 +342,12 @@
     'calendar': function (panel, now) {
       var root = svg(panel, '0 0 200 200');
       var column = 200 / 7, year = now.getFullYear(), month = now.getMonth();
-      text(root, column / 2 - 7, 14, upper(format(now, { month: 'long' })), 18, 600, 'accent', 'start');
+      // Sizes measured on the phone's calendar: digits about 45% of a column, in a regular weight.
+      text(root, column / 2 - 6, 14, upper(format(now, { month: 'long' })), 16, 550, 'accent', 'start');
       for (var c = 0; c < 7; c++) {
         var weekday = (firstDay + c) % 7, x = column * (c + 0.5);
         var sample = new Date(2023, 0, 1 + weekday); // 1 January 2023 was a Sunday.
-        text(root, x, 44, upper(format(sample, { weekday: 'narrow' })), 13, 600, 'fill' + (weekday % 6 === 0 ? ' dim' : ''));
+        text(root, x, 44, upper(format(sample, { weekday: 'narrow' })), 12, 600, 'fill' + (weekday % 6 === 0 ? ' dim' : ' soft'));
       }
       var offset = (new Date(year, month, 1).getDay() - firstDay + 7) % 7;
       var days = new Date(year, month + 1, 0).getDate(), rows = Math.ceil((offset + days) / 7);
@@ -355,10 +356,10 @@
         var cell = offset + d - 1, cx = column * (cell % 7 + 0.5), cy = 72 + Math.floor(cell / 7) * rowHeight;
         var dayOfWeek = new Date(year, month, d).getDay();
         if (d === now.getDate()) {
-          add(root, 'circle', { cx: cx, cy: cy, r: 12, 'class': 'accent' });
-          text(root, cx, cy, String(d), 15, 600, 'today-text');
+          add(root, 'circle', { cx: cx, cy: cy, r: 11, 'class': 'accent' });
+          text(root, cx, cy, String(d), 13, 500, 'today-text');
         } else {
-          text(root, cx, cy, String(d), 15, 500, 'fill' + (dayOfWeek % 6 === 0 ? ' dim' : ''));
+          text(root, cx, cy, String(d), 13, 450, 'fill' + (dayOfWeek % 6 === 0 ? ' dim' : ' soft'));
         }
       }
     },

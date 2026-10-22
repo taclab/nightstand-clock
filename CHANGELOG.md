@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Lighter calendar, sized after the phone's own: smaller digits with more room around them, a regular weight and a slightly softer white.
+
 ## 1.2.0
 
 - Analog round redrawn after the phone's own dial: even ticks with the hours in white, numerals on one circle with more room around them, two digit hours drawn in only slightly, and a margin around the dial.

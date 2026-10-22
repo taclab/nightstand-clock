@@ -78,6 +78,7 @@ text.dial { font-variant-numeric: proportional-nums; letter-spacing: -0.02em; }
 .seconds-stroke { stroke: var(--seconds); }
 .background { fill: var(--background); }
 .today-text { fill: var(--today-text); }
+.soft { opacity: 0.88; }
 .dim { opacity: 0.38; }
 .faint { opacity: 0.22; }
 .off { opacity: 0.16; }
