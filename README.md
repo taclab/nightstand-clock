@@ -49,6 +49,7 @@ Kiosk Satellite still decides when the screensaver starts and stops, its brightn
 | | Widget | Calendar, Weather, Date or None |
 | | Full screen clock | Analog or Digital |
 | Time and date | Show seconds | Second hand on analog clocks, the ring of seconds on the digital one |
+| | Second hand | On analog clocks. Smooth at 60 fps is the most fluid sweep. Smooth at 30 fps is a touch less fluid and uses less processor. Ticking moves once a second, like a quartz watch, and uses almost nothing |
 | | Time format | Automatic, 24-hour or 12-hour. Automatic follows the language, not Android's separate 12/24-hour switch |
 | | Language | Month, weekday and weather names: Automatic (device), English, Français, Deutsch, Español, Italiano, Português, Nederlands |
 | | First day of the week | Automatic, Monday, Sunday or Saturday |

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0
+
+- The second hand uses far less processor: it sweeps in a small layer of its own, turned by the graphics chip, and the rest of the clock changes once a second. On an Echo Show 5, from about 60% to 30% of the processor at 30 fps.
+- **Second hand** setting: Smooth at 60 fps, the most fluid; Smooth at 30 fps, the default, a touch less fluid for less processor; or Ticking, once a second like a quartz watch, which uses almost nothing.
+
 ## 1.2.1
 
 - Lighter calendar, sized after the phone's own: smaller digits with more room around them, a regular weight and a slightly softer white.

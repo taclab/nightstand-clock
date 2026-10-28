@@ -17,6 +17,7 @@
     layout: pick(options.layout, ['widget', 'full'], 'widget'),
     widget: pick(options.widget, ['calendar', 'weather', 'date', 'none'], 'calendar'),
     seconds: options.seconds !== false,
+    secondHand: pick(options.secondHand, ['60', '30', 'tick'], '30'),
     night: pick(options.night, ['off', 'always', 'schedule', 'entity'], 'off'),
     nightStart: number(options.nightStart, 22),
     nightEnd: number(options.nightEnd, 7),
@@ -156,22 +157,59 @@
     var hour = hand(radius * 0.52, radius * 0.054);
     var minute = hand(radius * (minuteLength || 0.84), radius * 0.054);
     add(parent, 'circle', { r: radius * 0.048, 'class': 'fill' });
-    var second = null;
-    if (o.seconds) {
-      second = add(parent, 'g', {});
-      add(second, 'line', {
-        x1: 0, y1: radius * 0.18, x2: 0, y2: -radius * 0.93, 'stroke-width': Math.max(1, radius * 0.013), 'class': 'seconds-stroke'
-      });
-      add(second, 'circle', { r: radius * 0.036, 'class': 'seconds' });
-      add(second, 'circle', { r: radius * 0.014, 'class': 'background' });
-    }
+    if (o.seconds) sweepHand(parent, radius);
     return function (now) {
-      var seconds = now.getSeconds() + (o.seconds ? now.getMilliseconds() / 1000 : 0);
-      var minutes = now.getMinutes() + seconds / 60;
+      var minutes = now.getMinutes() + now.getSeconds() / 60;
       hour.setAttribute('transform', 'rotate(' + (((now.getHours() % 12) + minutes / 60) * 30).toFixed(3) + ')');
       minute.setAttribute('transform', 'rotate(' + (minutes * 6).toFixed(3) + ')');
-      if (second) second.setAttribute('transform', 'rotate(' + (seconds * 6).toFixed(3) + ')');
     };
+  }
+
+  /**
+   * The second hand sweeps in a layer of its own over the dial, turned by the compositor. Redrawing the SVG on every
+   * frame kept a weak tablet's processor busy. The layer is only as large as the hand and pivots on the dial's center,
+   * so each frame redraws a thin strip of the screen. At 30 fps each step is under a pixel at the tip, a touch less
+   * fluid than 60 for less work. A ticking hand needs no animation: the once a second update moves the layer, and the
+   * screen is still in between.
+   */
+  var sweep = null, ticking = null;
+  function sweepHand(parent, radius) {
+    var dial = parent.ownerSVGElement || parent, panel = dial.parentNode;
+    var matrix = parent.getScreenCTM(), box = panel.getBoundingClientRect();
+    // Not laid out yet. The resize that follows draws the clock again.
+    if (!matrix) return;
+    var scale = matrix.a, pivotX = matrix.e - box.left, pivotY = matrix.f - box.top;
+    var half = radius * 0.036 + 1, top = radius * 0.93 + 1, height = top + radius * 0.18 + 1;
+    var layer = document.createElement('div');
+    layer.className = 'sweep';
+    layer.style.left = (pivotX - half * scale) + 'px';
+    layer.style.top = (pivotY - top * scale) + 'px';
+    layer.style.width = 2 * half * scale + 'px';
+    layer.style.height = height * scale + 'px';
+    layer.style.transformOrigin = half * scale + 'px ' + top * scale + 'px';
+    panel.appendChild(layer);
+    var second = svg(layer, -half + ' ' + -top + ' ' + 2 * half + ' ' + height);
+    add(second, 'line', {
+      x1: 0, y1: radius * 0.18, x2: 0, y2: -radius * 0.93, 'stroke-width': Math.max(1, radius * 0.013), 'class': 'seconds-stroke'
+    });
+    add(second, 'circle', { r: radius * 0.036, 'class': 'seconds' });
+    add(second, 'circle', { r: radius * 0.014, 'class': 'background' });
+    if (o.secondHand === 'tick') {
+      ticking = layer;
+      return;
+    }
+    sweep = layer.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
+      { duration: 60000, iterations: Infinity, easing: o.secondHand === '60' ? 'linear' : 'steps(1800)' });
+    keepSweep();
+  }
+
+  /** Put the hand back on the clock when the animation drifted, such as after the screen slept or the clock changed. */
+  function keepSweep() {
+    if (!sweep) return;
+    var expected = Date.now() % 60000, drift = (sweep.currentTime - expected) % 60000;
+    if (drift > 30000) drift -= 60000;
+    if (drift < -30000) drift += 60000;
+    if (!(Math.abs(drift) < 40)) sweep.currentTime = expected;
   }
 
   function time(now) {
@@ -407,6 +445,8 @@
   function build() {
     var now = new Date();
     root.className = o.layout === 'full' ? 'full' : o.widget === 'none' ? 'alone' : '';
+    if (sweep) sweep.cancel();
+    sweep = ticking = null;
     clockPanel.textContent = '';
     update = clocks[o.layout === 'full' ? 'full-' + o.clock : o.clock](clockPanel, now);
     widgetDay = '';
@@ -427,14 +467,11 @@
       widgets[o.widget](widgetPanel, now);
     }
     update(now);
+    keepSweep();
+    if (ticking) ticking.style.transform = 'rotate(' + now.getSeconds() * 6 + 'deg)';
   }
 
-  // A sweeping second hand needs every frame. Everything else changes once a second.
-  var sweeping = o.seconds && o.clock !== 'digital';
-  function frame() {
-    tick();
-    requestAnimationFrame(frame);
-  }
+  // The second hand sweeps on its own. Everything else changes once a second.
   function second() {
     tick();
     setTimeout(second, 1000 - Date.now() % 1000 + 5);
@@ -445,7 +482,11 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(build, 150);
   });
+  // A hidden page runs its timers late. Put the hands right as soon as it shows again.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) tick();
+  });
   build();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
-  if (sweeping) requestAnimationFrame(frame); else second();
+  second();
 }());

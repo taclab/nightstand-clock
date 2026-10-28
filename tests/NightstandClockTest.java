@@ -91,10 +91,21 @@ public final class NightstandClockTest {
         assert "fr".equals(host.options.get("locale")) && "monday".equals(host.options.get("weekStart"));
         assert "#AABBCC".equals(host.options.get("primary")) && "#FF3B30".equals(host.options.get("accent"));
         assert host.subscriptions.isEmpty() : host.subscriptions;
+        assert "30".equals(host.options.get("secondHand")) : host.options.get("secondHand");
+
+        // The second hand setting maps to the page's sweep.
+        settings.put("secondHand", "Ticking");
+        plugin.configure(settings);
+        assert "tick".equals(host.options.get("secondHand"));
+        settings.put("secondHand", "Smooth, 60 fps");
+        plugin.configure(settings);
+        host.settle();
+        assert "60".equals(host.options.get("secondHand"));
 
         // Unchanged settings do not recreate the page.
+        int published = host.publications;
         plugin.configure(settings);
-        assert host.publications == 1;
+        assert host.publications == published;
 
         // The weather widget follows its entity and asks for today's forecast when the entity has none.
         settings.put("widget", "Weather");

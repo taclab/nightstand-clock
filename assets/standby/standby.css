@@ -46,6 +46,7 @@ html, body {
 }
 :root.night #root { opacity: var(--night-opacity, 0.7); }
 .panel {
+  position: relative;
   flex: 0 0 auto;
   width: min(50vw - 6vmin, 100vh - 8vmin);
   height: min(50vw - 6vmin, 100vh - 8vmin);
@@ -64,6 +65,7 @@ html, body {
 #root.alone #widget, #root.full #widget { display: none; }
 #root.full { padding: 0; }
 #root.full #clock { width: 100vw; height: 100vh; }
+.sweep { position: absolute; will-change: transform; pointer-events: none; }
 svg { display: block; width: 100%; height: 100%; overflow: visible; }
 /* Inter's display cut is tighter and finer, closer to the large clock numerals of a phone. SVG text sizes are
    in viewBox units, so the browser would otherwise pick the small text cut. */
