@@ -44,6 +44,10 @@ public final class NightstandClockPlugin implements KioskPlugin {
     private final Set<String> subscribed = new LinkedHashSet<>();
     private String weatherEntity = "";
     private String nightEntity = "";
+    private String alarmEntity = "";
+    /** The next alarm as Home Assistant wrote it, such as 2026-10-30T05:30:00+00:00, or null when none is set. */
+    private String alarm;
+    private boolean alarmKnown;
     private Weather weather;
     private Weather.Day forecast;
     private long forecastAt;
@@ -75,10 +79,12 @@ public final class NightstandClockPlugin implements KioskPlugin {
     @Override public void configure(Map<String, Object> settings) {
         synchronized (lock) {
             this.settings = new HashMap<>(settings);
-            boolean weatherShown = "Clock and widget".equals(ClockOptions.choice(settings.get("layout"), "Clock and widget", "Clock and widget", "Full screen clock"))
-                && "Weather".equals(settings.get("widget"));
+            boolean full = "Full screen clock".equals(ClockOptions.choice(settings.get("layout"), "Clock and widget", "Clock and widget", "Full screen clock"));
+            // The Weather widget and the full screen digital clock show the weather.
+            boolean weatherShown = full ? "Digital".equals(settings.get("fullscreenStyle")) : "Weather".equals(settings.get("widget"));
             String nextWeather = weatherShown ? ClockOptions.text(settings.get("weatherEntity")) : "";
             String nextNight = "Home Assistant entity".equals(settings.get("nightMode")) ? ClockOptions.text(settings.get("nightEntity")) : "";
+            String nextAlarm = full ? ClockOptions.text(settings.get("alarmEntity")) : "";
             if (!nextWeather.equals(weatherEntity)) {
                 weather = null;
                 forecast = null;
@@ -89,8 +95,13 @@ public final class NightstandClockPlugin implements KioskPlugin {
                 nightSnapshot = null;
                 nightActive = null;
             }
+            if (!nextAlarm.equals(alarmEntity)) {
+                alarm = null;
+                alarmKnown = false;
+            }
             weatherEntity = nextWeather;
             nightEntity = nextNight;
+            alarmEntity = nextAlarm;
             follow();
             // The threshold may have changed while the entity kept its value.
             updateNight();
@@ -103,6 +114,7 @@ public final class NightstandClockPlugin implements KioskPlugin {
         Set<String> wanted = new LinkedHashSet<>();
         if (!weatherEntity.isEmpty()) wanted.add(weatherEntity);
         if (!nightEntity.isEmpty()) wanted.add(nightEntity);
+        if (!alarmEntity.isEmpty()) wanted.add(alarmEntity);
         for (String entity : new LinkedHashSet<>(subscribed)) {
             if (!wanted.contains(entity)) {
                 host.unsubscribe("ha.entity." + entity);
@@ -125,6 +137,11 @@ public final class NightstandClockPlugin implements KioskPlugin {
             if (entity.equals(nightEntity)) {
                 nightSnapshot = payload;
                 updateNight();
+            }
+            if (entity.equals(alarmEntity) && "available".equals(payload.get("status"))) {
+                // While the entity is unavailable, such as during a Home Assistant restart, the alarm still rings.
+                alarm = alarmTime(payload.get("state"));
+                alarmKnown = true;
             }
             publish();
         }
@@ -183,6 +200,11 @@ public final class NightstandClockPlugin implements KioskPlugin {
         }
     }
 
+    /** The timestamp state of a next alarm sensor, or null for unknown and anything else that is not a date and time. */
+    static String alarmTime(Object state) {
+        return state instanceof String && ((String) state).trim().matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}.*") ? ((String) state).trim() : null;
+    }
+
     /** The margin a numeric entity must climb above the threshold to end the night, so a flickering sensor holds still. */
     static double hysteresis(double threshold) {
         return Math.max(1, threshold * 0.1);
@@ -207,7 +229,7 @@ public final class NightstandClockPlugin implements KioskPlugin {
     private void publish() {
         if (!alive) return;
         Weather.Day today = shownForecast();
-        Map<String, Object> options = ClockOptions.options(settings, weather, today, nightActive);
+        Map<String, Object> options = ClockOptions.options(settings, weather, today, nightActive, alarm);
         showStatus(today);
         if (options.equals(published)) {
             cancelPendingPublication();
@@ -263,6 +285,9 @@ public final class NightstandClockPlugin implements KioskPlugin {
         }
         if (!nightEntity.isEmpty()) {
             status.append(nightActive == null ? " Waiting for " + nightEntity + "." : nightActive ? " Night mode on." : " Night mode off.");
+        }
+        if (!alarmEntity.isEmpty()) {
+            status.append(!alarmKnown ? " Waiting for " + alarmEntity + "." : alarm == null ? " No alarm set." : " Next alarm: " + alarm + ".");
         }
         String text = status.toString();
         if (text.equals(lastStatus)) return;

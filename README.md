@@ -4,7 +4,7 @@ A bedside clock screensaver for [Kiosk Satellite](https://github.com/jxlarrea/ki
 
 ## Screenshots
 
-Captured at 960 × 480, the screen of an Echo Show 5 (2nd generation).
+Captured at 960 × 480, the screen of an Echo Show 5 (1st and 2nd generation).
 
 | | |
 | --- | --- |
@@ -15,7 +15,7 @@ Captured at 960 × 480, the screen of an Echo Show 5 (2nd generation).
 | ![Digital clock and calendar](docs/screenshots/digital-calendar.png) | ![Digital clock and weather](docs/screenshots/digital-weather.png) |
 | Digital, Calendar with custom colors | Digital, Weather (Français) |
 | ![Full screen analog clock](docs/screenshots/full-analog.png) | ![Full screen digital clock](docs/screenshots/full-digital.png) |
-| Full screen Analog | Full screen Digital |
+| Full screen Analog with the next alarm | Full screen Digital with the date, the temperature and the next alarm |
 | ![Analog clock and calendar at night](docs/screenshots/analog-calendar-night.png) | ![Full screen analog clock at night](docs/screenshots/full-analog-night.png) |
 | Night mode | Night mode, full screen |
 
@@ -23,12 +23,12 @@ Captured at 960 × 480, the screen of an Echo Show 5 (2nd generation).
 
 | Layout | Clock | Beside it |
 | --- | --- | --- |
-| Clock and widget | **Analog**: rounded square dial with 12, 3, 6 and 9 | **Calendar**: the month with today circled |
+| Clock and widget | **Analog**: square dial with 12, 3, 6 and 9 | **Calendar**: the month with today circled |
 | | **Analog round**: circular dial with every hour | **Weather**: place, temperature, condition, today's high and low |
 | | **Digital**: large numbers in a ring of ticks that fill with the seconds | **Date**: weekday, day and month |
 | | | **None**: the clock alone, centered |
-| Full screen clock | **Analog**: ticks out to the screen edges, the date inside the dial | |
-| | **Digital**: large numbers under the date | |
+| Full screen clock | **Analog**: ticks out to the screen edges, the date inside the dial and the next alarm opposite it | |
+| | **Digital**: large numbers with a column beside them: the date, the temperature and the next alarm | |
 
 Portrait screens stack the clock above the widget.
 
@@ -57,8 +57,9 @@ Kiosk Satellite still decides when the screensaver starts and stops, its brightn
 | | Accent color | Month name, today and the date. Red by default |
 | | Second hand color | Orange by default |
 | | Background color | Black by default, best on OLED screens. Night mode always uses black |
-| Weather | Weather entity | A Home Assistant `weather.*` entity for the Weather widget |
+| Weather | Weather entity | A Home Assistant `weather.*` entity for the Weather widget and the full screen digital clock |
 | | Place name | Shown above the temperature. Empty uses the entity's name |
+| Alarm | Next alarm entity | The kiosk's **Next alarm** sensor, which Kiosk Satellite adds to its ESPHome device in Home Assistant with **Expose kiosk entities** on. Only the full screen clocks show the alarm, when it rings within a day |
 | Night mode | Night mode | Off, Always, Schedule or Home Assistant entity |
 | | Night starts at / ends at | Hours for Schedule, such as 22 to 7 |
 | | Night entity | Night while it is `on`, `true` or `below_horizon` (`sun.sun`). For a number, such as an illuminance sensor, night below the threshold. While the entity is unavailable, night mode keeps its last state |
@@ -71,17 +72,17 @@ Kiosk Satellite still decides when the screensaver starts and stops, its brightn
 The plugin declares three capabilities:
 
 - `screensaver` to draw the clock.
-- `host.read` to follow the weather entity and the night entity through Kiosk Satellite's own Home Assistant connection.
+- `host.read` to follow the weather entity, the night entity and the next alarm entity through Kiosk Satellite's own Home Assistant connection.
 - `ha` to call `weather.get_forecasts` for today's high and low when the weather entity has no forecast attribute: every 30 minutes, or every 5 minutes while there is no entry for today, such as just after midnight. The high and the low disappear once their day is over.
 
-It sends nothing anywhere else. The screensaver page has no network access. The Inter font is bundled under the SIL Open Font License (`assets/standby/fonts/OFL.txt`).
+It sends nothing anywhere else. The screensaver page has no network access. The Inter font is bundled under the SIL Open Font License (`assets/standby/fonts/OFL.txt`), and so are the digits of Archivo, at its widest, for the full screen analog dial (`assets/standby/fonts/OFL-Archivo.txt`).
 
 ## Tested on
 
 - Echo Show 5 (1st and 2nd generation), 960 × 480, with Kiosk Satellite and SDK 1.
 - Desktop Chrome at 960 × 480 and 480 × 960 for the screenshots.
 
-The page needs a WebView based on Chrome 79 or newer, for CSS `min()`. Older Android 7 devices that never updated their WebView may not lay it out correctly. Please include the device, the Kiosk Satellite version and the WebView version (**Settings > Apps > Android System WebView**) when reporting a problem, with the plugin's settings.
+The plugin needs Kiosk Satellite 2026.10.30 or newer. The page needs a WebView based on Chrome 79 or newer, for CSS `min()`. Older Android 7 devices that never updated their WebView may not lay it out correctly. Please include the device, the Kiosk Satellite version and the WebView version (**Settings > Apps > Android System WebView**) when reporting a problem, with the plugin's settings.
 
 ## Installation
 

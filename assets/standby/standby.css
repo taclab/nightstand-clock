@@ -4,6 +4,13 @@
   font-weight: 400 800;
   src: url('fonts/inter-latin.woff2') format('woff2');
 }
+/* Archivo at its widest and semibold, digits only, for the full screen dial's numerals like the phone's expanded ones. */
+@font-face {
+  font-family: 'Archivo Expanded';
+  font-style: normal;
+  font-weight: 600;
+  src: url('fonts/archivo-expanded-digits.woff2') format('woff2');
+}
 :root {
   --primary: var(--user-primary, #FFFFFF);
   --accent: var(--user-accent, #FF3B30);
@@ -72,6 +79,7 @@ svg { display: block; width: 100%; height: 100%; overflow: visible; }
 text { font-family: inherit; font-variant-numeric: tabular-nums; font-variation-settings: 'opsz' 32; }
 /* Dial numerals use proportional digits, so 11 is as narrow as it looks on a watch. */
 text.dial { font-variant-numeric: proportional-nums; letter-spacing: -0.02em; }
+text.wide { font-family: 'Archivo Expanded', 'Inter', sans-serif; font-variation-settings: normal; letter-spacing: 0; }
 .fill { fill: var(--primary); }
 .stroke { stroke: var(--primary); }
 .accent { fill: var(--accent); }
@@ -79,6 +87,7 @@ text.dial { font-variant-numeric: proportional-nums; letter-spacing: -0.02em; }
 .seconds { fill: var(--seconds); }
 .seconds-stroke { stroke: var(--seconds); }
 .background { fill: var(--background); }
+.background-stroke { stroke: var(--background); }
 .today-text { fill: var(--today-text); }
 .soft { opacity: 0.88; }
 .dim { opacity: 0.38; }

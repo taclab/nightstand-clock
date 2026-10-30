@@ -42,10 +42,12 @@ final class ClockOptions {
     }
 
     /**
-     * Settings, then the latest weather, today's forecast and night readings, as scalar values for the page. The page
-     * shows the high and the low only while weatherDate is still its own date, so they vanish at midnight.
+     * Settings, then the latest weather, today's forecast, night readings and next alarm, as scalar values for the page.
+     * The page shows the high and the low only while weatherDate is still its own date, so they vanish at midnight. It
+     * shows the alarm only when it rings within a day.
      */
-    static Map<String, Object> options(Map<String, Object> settings, Weather weather, Weather.Day today, Boolean nightEntityActive) {
+    static Map<String, Object> options(Map<String, Object> settings, Weather weather, Weather.Day today, Boolean nightEntityActive,
+                                       String alarm) {
         Map<String, Object> data = new LinkedHashMap<>();
         boolean full = "Full screen clock".equals(choice(settings.get("layout"), "Clock and widget", "Clock and widget", "Full screen clock"));
         data.put("layout", full ? "full" : "widget");
@@ -82,6 +84,7 @@ final class ClockOptions {
         data.put("weatherDate", extremes ? today.date : null);
         data.put("weatherHigh", extremes ? today.high : null);
         data.put("weatherLow", extremes ? today.low : null);
+        data.put("alarm", full ? alarm : null);
         return data;
     }
 }

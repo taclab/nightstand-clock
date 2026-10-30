@@ -190,16 +190,47 @@ public final class NightstandClockTest {
         host.settle();
         assert Boolean.FALSE.equals(host.options.get("nightActive"));
 
-        // The full screen layout drops the weather subscription and uses its own style.
-        settings.put("layout", "Full screen clock"); settings.put("fullscreenStyle", "Digital");
+        // The full screen analog clock drops the weather subscription. The digital one shows the temperature.
+        settings.put("layout", "Full screen clock"); settings.put("fullscreenStyle", "Analog");
         plugin.configure(settings);
         host.settle();
-        assert "full".equals(host.options.get("layout")) && "digital".equals(host.options.get("clock"));
+        assert "full".equals(host.options.get("layout")) && "analog".equals(host.options.get("clock"));
         assert host.subscriptions.equals(new LinkedHashSet<>(Arrays.asList("ha.entity.sensor.lux"))) : host.subscriptions;
+        settings.put("fullscreenStyle", "Digital");
+        plugin.configure(settings);
+        host.settle();
+        assert "digital".equals(host.options.get("clock"));
+        assert host.subscriptions.contains("ha.entity.weather.home") : host.subscriptions;
 
-        // A late forecast after stop is ignored, and the plugin's thread is gone.
+        // The full screen clocks follow the kiosk's next alarm.
+        settings.put("alarmEntity", "sensor.kiosk_next_alarm");
+        plugin.configure(settings);
+        assert host.subscriptions.contains("ha.entity.sensor.kiosk_next_alarm") : host.subscriptions;
+        plugin.onEvent("ks.ha.entity.sensor.kiosk_next_alarm", snapshot("2026-10-30T05:30:00+00:00", new HashMap<>()));
+        host.settle();
+        assert "2026-10-30T05:30:00+00:00".equals(host.options.get("alarm")) : host.options.get("alarm");
+        assert host.status.contains("Next alarm") : host.status;
+        // Home Assistant restarting keeps the alarm. No alarm set clears it.
+        Map<String, Object> gone = snapshot("unavailable", new HashMap<>());
+        gone.put("status", "unavailable");
+        plugin.onEvent("ks.ha.entity.sensor.kiosk_next_alarm", gone);
+        assert "2026-10-30T05:30:00+00:00".equals(host.options.get("alarm"));
+        plugin.onEvent("ks.ha.entity.sensor.kiosk_next_alarm", snapshot("unknown", new HashMap<>()));
+        host.settle();
+        assert host.options.get("alarm") == null && host.status.contains("No alarm set") : host.status;
+        plugin.onEvent("ks.ha.entity.sensor.kiosk_next_alarm", snapshot("2026-10-31T06:00:00+00:00", new HashMap<>()));
+        host.settle();
+        assert "2026-10-31T06:00:00+00:00".equals(host.options.get("alarm"));
+        settings.put("fullscreenStyle", "Analog");
+        plugin.configure(settings);
+        host.settle();
+        assert "2026-10-31T06:00:00+00:00".equals(host.options.get("alarm")) : "The analog clock shows the alarm too";
+
+        // A late forecast after stop is ignored, and the plugin's thread is gone. Beside a widget there is no alarm.
         settings.put("layout", "Clock and widget");
         plugin.configure(settings);
+        host.settle();
+        assert host.options.get("alarm") == null && !host.subscriptions.contains("ha.entity.sensor.kiosk_next_alarm");
         plugin.onEvent("ks.ha.entity.weather.home", snapshot("rainy", new HashMap<>(attributes)));
         plugin.stop();
         int before = host.publications;

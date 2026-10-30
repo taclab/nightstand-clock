@@ -219,12 +219,78 @@
     return hours + ':' + (minutes < 10 ? '0' : '') + minutes;
   }
 
+  /** A rounded temperature with a true minus sign. */
+  function degrees(value) {
+    return String(Math.round(value)).replace('-', '\u2212') + '°';
+  }
+
+  /** AM or PM in the page's language, or nothing on a 24-hour clock. */
+  var periodFormat = null;
+  function period(date) {
+    if (!hour12) return '';
+    try {
+      periodFormat = periodFormat || new Intl.DateTimeFormat(locale, { hour: 'numeric', hour12: true });
+      var parts = periodFormat.formatToParts(date);
+      for (var i = 0; i < parts.length; i++) if (parts[i].type === 'dayPeriod') return parts[i].value.toLocaleUpperCase(locale);
+    } catch (_) {}
+    return date.getHours() < 12 ? 'AM' : 'PM';
+  }
+
+  // The kiosk's next alarm, from its Next alarm sensor. It shows once it rings within a day, as on the phone.
+  var alarmAt = typeof options.alarm === 'string' ? Date.parse(options.alarm) : NaN;
+  if (!isFinite(alarmAt)) alarmAt = null;
+  function alarmDue(now) {
+    return alarmAt !== null && alarmAt > now.getTime() && alarmAt - now.getTime() <= 24 * 3600 * 1000;
+  }
+  function alarmIcon(parent, x, y, size) {
+    var g = add(parent, 'g', { transform: 'translate(' + x + ',' + y + ') scale(' + size / 32 + ')' });
+    add(g, 'path', { d: 'M2.5 10.5a6.5 6.5 0 0 1 8-8zM29.5 10.5a6.5 6.5 0 0 0-8-8z', 'class': 'seconds' });
+    add(g, 'path', { d: 'M8.5 26.5l-3 3.5M23.5 26.5l3 3.5', 'stroke-width': 2.6, 'stroke-linecap': 'round', 'class': 'seconds-stroke' });
+    add(g, 'circle', { cx: 16, cy: 18, r: 11.5, 'class': 'seconds' });
+    add(g, 'path', { d: 'M16 11.5V18l4 2.5', fill: 'none', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'class': 'background-stroke' });
+  }
+  /**
+   * The alarm's icon and time, hidden while no alarm is due. Beside the time on one line, or above it in a column.
+   * y is the middle of the time's digits. Returns a function that updates it to the given time and tells whether it
+   * changed. The function's group is the label.
+   */
+  function alarmLabel(parent, x, y, size, beside) {
+    var g = add(parent, 'g', { display: 'none' }), icon = size * 1.1;
+    if (beside) alarmIcon(g, x, y - icon * 0.55, icon);
+    else alarmIcon(g, x, y - size * 0.55 - size * 0.45 - icon, icon);
+    var label = text(g, beside ? x + icon * 1.3 : x, y, '', size, 600, 'fill', 'start');
+    var shown;
+    function update(now) {
+      var due = alarmDue(now) ? alarmAt : null;
+      if (due === shown) return false;
+      shown = due;
+      g.setAttribute('display', due === null ? 'none' : 'inline');
+      if (due === null) return true;
+      var at = new Date(due), suffix = period(at);
+      label.textContent = time(at);
+      if (suffix) add(label, 'tspan', { 'font-size': size * 0.72, dx: size * 0.06 }).textContent = suffix;
+      return true;
+    }
+    update.group = g;
+    return update;
+  }
+  /** How much an element drawn from anchor must shrink toward it to stay short of limit, at most 1. */
+  function fitScale(element, anchor, limit) {
+    var box;
+    try { box = element.getBBox(); } catch (_) { return 1; }
+    var far = limit > anchor ? box.x + box.width : box.x;
+    return box.width > 0 && (far - anchor) / (limit - anchor) > 1 ? (limit - anchor) / (far - anchor) : 1;
+  }
+  function scaleFrom(element, anchor, scale) {
+    element.setAttribute('transform', scale < 1 ? 'translate(' + anchor + ',0) scale(' + scale + ') translate(' + -anchor + ',0)' : '');
+  }
+
   // Clocks. Each one draws into its panel and returns a function that moves it to the given time.
   var clocks = {
     'analog': function (panel) {
       var root = svg(panel, '-100 -100 200 200');
       for (var i = 0; i < 60; i++) {
-        var angle = i * Math.PI / 30, r = edge(angle, 98, 98, 4.6);
+        var angle = i * Math.PI / 30, r = edge(angle, 98, 98, 24);
         if (i % 15 === 0) {
           ray(root, angle, r - 13, r, 3, 'stroke');
           var at = point(angle, r - 39);
@@ -283,46 +349,85 @@
       var center = add(root, 'g', { transform: 'translate(' + width / 2 + ',' + height / 2 + ')' });
       var pad = Math.min(width, height) * 0.035, a = width / 2 - pad, b = height / 2 - pad;
       var small = Math.min(a, b), stroke = small / 100;
+      // As on the phone, the 3 and the 9 sit out toward the edges on shorter ticks, leaving room for the date and the
+      // alarm. The 12 and the 6 keep to the middle.
+      var side = 0.7;
       for (var i = 0; i < 60; i++) {
-        var angle = i * Math.PI / 30, r = edge(angle, a, b, 7);
+        var angle = i * Math.PI / 30, r = edge(angle, a, b, 24);
         if (i % 15 === 0) {
-          ray(center, angle, r * 0.72, r, 3.2 * stroke, 'stroke');
-          var at = point(angle, r * 0.56);
-          text(center, at[0], at[1], String(i / 5 || 12), small * 0.27, 600, 'fill dial');
+          var across = i % 30 !== 0;
+          ray(center, angle, r * (across ? 0.82 : 0.72), r, 3.2 * stroke, 'stroke');
+          var at = point(angle, r * (across ? side : 0.56));
+          text(center, at[0], at[1], String(i / 5 || 12), small * 0.32, 600, 'fill dial wide');
         } else if (i % 5 === 0) {
           ray(center, angle, r * 0.6, r, 2.6 * stroke, 'stroke');
         } else {
           ray(center, angle, r * 0.92, r, 1.3 * stroke, 'stroke dim');
         }
       }
-      // Ends a little before the 3, which sits at 56% of the half width.
-      var date = text(center, a * 0.56 - small * 0.22, 0, '', small * 0.11, 600, 'accent', 'end');
+      // The date ends a little before the 3.
+      var dateEnd = a * side - small * 0.3, alarmStart = -(a * side - small * 0.33), hub = small * 0.1;
+      var date = text(center, dateEnd, 0, '', small * 0.125, 600, 'accent', 'end');
       date.setAttribute('letter-spacing', small * 0.004);
+      // The alarm starts a little further from the 9 than the date ends from the 3, as on the phone.
+      var alarm = alarmLabel(center, alarmStart, 0, small * 0.125, true);
       var move = hands(center, small * 1.05), day = '';
       return function (now) {
-        var today = now.toDateString();
+        var today = now.toDateString(), changed = alarm(now);
         if (today !== day) {
           day = today;
-          date.textContent = upper(format(now, { weekday: 'short' })) + ' ' + now.getDate();
+          changed = true;
+          date.textContent = upper(format(now, { weekday: 'short' })) + ' ';
+          add(date, 'tspan', { 'class': 'fill' }).textContent = String(now.getDate());
+        }
+        if (changed) {
+          // Screens less wide than the phone leave less room beside the hub. Both shrink alike to clear it.
+          scaleFrom(date, dateEnd, 1);
+          scaleFrom(alarm.group, alarmStart, 1);
+          var scale = Math.min(fitScale(date, dateEnd, hub), alarm.group.getAttribute('display') === 'none' ? 1 : fitScale(alarm.group, alarmStart, -hub));
+          scaleFrom(date, dateEnd, scale);
+          scaleFrom(alarm.group, alarmStart, scale);
         }
         move(now);
       };
     },
     'full-digital': function (panel) {
+      // The time as large as the screen allows, with a column beside it: the date and the temperature at the top of
+      // the digits, the alarm at their foot.
       var width = panel.clientWidth || innerWidth, height = panel.clientHeight || innerHeight;
       var root = svg(panel, '0 0 ' + width + ' ' + height);
-      var size = Math.min(height * 0.56, width * 0.34);
-      var date = text(root, width / 2, height / 2 - size * 0.62, '', size * 0.15, 600, 'accent');
-      var label = text(root, width / 2, height / 2 + size * 0.1, '', size, 700, 'fill');
+      var label = text(root, 0, 0, '00:00', 100, 700, 'fill', 'start');
+      label.setAttribute('letter-spacing', -3);
+      // Digits share one width, so 00:00 is as wide as any time. Measured, since the font decides it.
+      var unit = label.getComputedTextLength() / 100 || 2.9, gap = 0.1, column = 0.5;
+      var size = Math.min(height * 0.84, width * 0.9 / (unit + gap + column)), middle = height / 2;
+      label.setAttribute('y', middle + size * 0.02);
+      label.setAttribute('font-size', size);
       label.setAttribute('letter-spacing', -size * 0.03);
+      // Digits are about 0.73 of the size tall, centered on the middle. The column moves with the time's width.
+      var small = size * 0.11, top = middle - size * 0.365, bottom = middle + size * 0.365;
+      var side = add(root, 'g', {});
+      var date = text(side, 0, top + small * 0.37, '', small, 600, 'accent', 'start');
+      if (options.weatherConfigured === true && typeof options.weatherTemperature === 'number') {
+        text(side, 0, top + small * 1.75, degrees(options.weatherTemperature), small, 600, 'fill', 'start');
+      }
+      var alarm = alarmLabel(side, 0, bottom - small * 0.37, small, false);
       var shown = '', day = '';
       return function (now) {
         var value = time(now), today = now.toDateString();
-        if (value !== shown) label.textContent = shown = value;
+        if (value !== shown) {
+          label.textContent = shown = value;
+          // A one digit hour is narrower. Keep the time and the column together in the middle of the screen.
+          var wide = label.getComputedTextLength() || size * unit, left = (width - wide - size * (gap + column)) / 2;
+          label.setAttribute('x', left);
+          side.setAttribute('transform', 'translate(' + (left + wide + size * gap) + ',0)');
+        }
         if (today !== day) {
           day = today;
-          date.textContent = capitalized(format(now, { weekday: 'long', day: 'numeric', month: 'long' }));
+          date.textContent = upper(format(now, { weekday: 'short' })) + ' ';
+          add(date, 'tspan', { 'class': 'fill' }).textContent = String(now.getDate());
         }
+        alarm(now);
       };
     }
   };
@@ -419,7 +524,7 @@
       var place = typeof options.weatherPlace === 'string' ? options.weatherPlace : '';
       if (place.length > 20) place = place.slice(0, 19) + '…';
       text(root, 6, 20, place, 17, 600, 'fill', 'start');
-      var temperature = typeof options.weatherTemperature === 'number' ? Math.round(options.weatherTemperature) + '°' : '--°';
+      var temperature = typeof options.weatherTemperature === 'number' ? degrees(options.weatherTemperature) : '--°';
       text(root, 0, 86, temperature, 92, 500, 'fill', 'start').setAttribute('letter-spacing', '-4');
       var condition = typeof options.weatherCondition === 'string' ? options.weatherCondition : '';
       if (condition) weatherIcon(root, condition, 6, 134, 26);
