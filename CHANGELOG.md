@@ -4,7 +4,7 @@
 
 - **Next alarm on the full screen clocks.** Choose the kiosk's Next alarm sensor under the new **Alarm** setting. The full screen analog clock shows the alarm opposite the date, after the 9. Like the phone, it shows only when the alarm rings within a day.
 - **Square analog dials.** The Analog clock beside a widget and the full screen analog clock have square corners, as on the phone.
-- **Full screen analog closer to the phone.** Larger, expanded numerals in Archivo with the 3 and the 9 out toward the edges, a slightly larger date with the day in white, and the alarm a little further from the 9. On screens less wide than the phone, such as the Echo Show 8, the date and the alarm shrink to keep clear of the hands.
+- **Full screen analog closer to the phone.** Larger, expanded numerals in Archivo with the 3 and the 9 out toward the edges, a slightly larger date with the day in white, and the alarm a little further from the 9. On screens much less wide than the phone, the date and the alarm shrink if they would reach the hands.
 - **Full screen digital redrawn.** The time fills the screen with a column beside it: the date, the temperature from the weather entity and the next alarm.
 - Temperatures below zero use a true minus sign.
 - The manifest names the oldest Kiosk Satellite release the plugin works on, 2026.10.30, the first with plugin icons.
