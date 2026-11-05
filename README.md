@@ -72,8 +72,9 @@ Kiosk Satellite still decides when the screensaver starts and stops, its brightn
 | Weather | Weather entity | A Home Assistant `weather.*` entity for the Weather widget and the full screen digital clock |
 | | Place name | Shown above the temperature. Empty uses the entity's name |
 | Alarm | Next alarm entity | The kiosk's **Next alarm** sensor, which Kiosk Satellite adds to its ESPHome device in Home Assistant with **Expose kiosk entities** on. Only the full screen clocks show the alarm, when it rings within a day |
-| Night mode | Night mode | Off, Always, Schedule or Home Assistant entity |
+| Night mode | Night mode | Off, Always, Schedule, Room light sensor or Home Assistant entity |
 | | Night starts at / ends at | Hours for Schedule, such as 22 to 7 |
+| | Room light level | For Room light sensor, which reads the device's own sensor. Night starts at or below this level, 5 lx by default, up to 10000, and ends above 1.25 times it. To try it, type a level above the current reading. The **Read** button just below shows the sensor's current reading, and the plugin's status follows it. On a device without a sensor, the plugin's status says so and night mode stays off |
 | | Night entity | Night while it is `on`, `true` or `below_horizon` (`sun.sun`). For a number, such as an illuminance sensor, night below the threshold. While the entity is unavailable, night mode keeps its last state |
 | | Darkness threshold | For a numeric night entity. Night ends once the value climbs 10% above the threshold (at least 1), so a flickering sensor does not switch back and forth |
 | | Night color | Everything is drawn in this color at night. Red by default |
@@ -84,7 +85,7 @@ Kiosk Satellite still decides when the screensaver starts and stops, its brightn
 The plugin declares three capabilities:
 
 - `screensaver` to draw the clock.
-- `host.read` to follow the weather entity, the night entity and the next alarm entity through Kiosk Satellite's own Home Assistant connection.
+- `host.read` to follow the weather entity, the night entity and the next alarm entity through Kiosk Satellite's own Home Assistant connection, and to read the device's light sensor for the Room light sensor night mode.
 - `ha` to call `weather.get_forecasts` for today's high and low when the weather entity has no forecast attribute: every 30 minutes, or every 5 minutes while there is no entry for today, such as just after midnight. The high and the low disappear once their day is over.
 
 It sends nothing anywhere else. The screensaver page has no network access. The Inter font is bundled under the SIL Open Font License (`assets/standby/fonts/OFL.txt`), and so are the digits of Archivo, at its widest, for the full screen analog dial (`assets/standby/fonts/OFL-Archivo.txt`).

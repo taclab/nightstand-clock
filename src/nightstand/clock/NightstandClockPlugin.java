@@ -32,6 +32,9 @@ public final class NightstandClockPlugin implements KioskPlugin {
     static final int PUBLICATIONS_PER_WINDOW = 3;
     static final long PUBLICATION_WINDOW_MS = 1100;
     static final long MAX_RETRY_MS = 60_000;
+    static final String LIGHT_EVENT = "device.light";
+    /** Night ends above the threshold times this, the margin KS's own Clock screensaver uses. */
+    static final double LIGHT_MARGIN = 1.25;
 
     private final Object lock = new Object();
     private PluginHost host;
@@ -53,6 +56,11 @@ public final class NightstandClockPlugin implements KioskPlugin {
     private long forecastAt;
     private int forecastRevision;
     private Map<String, Object> nightSnapshot;
+    private boolean lightFollowed;
+    private int lightRevision;
+    /** Null until the host has answered whether the device has a sensor. */
+    private Boolean lightPresent;
+    private Double roomLux;
     private Boolean nightActive;
     private Map<String, Object> published;
     private String lastStatus;
@@ -103,7 +111,8 @@ public final class NightstandClockPlugin implements KioskPlugin {
             nightEntity = nextNight;
             alarmEntity = nextAlarm;
             follow();
-            // The threshold may have changed while the entity kept its value.
+            followLight("Room light sensor".equals(settings.get("nightMode")));
+            // The threshold may have changed while the entity or the sensor kept its value.
             updateNight();
             publish();
         }
@@ -126,7 +135,65 @@ public final class NightstandClockPlugin implements KioskPlugin {
         }
     }
 
+    /** Start or stop following the device's light sensor. Unlike an entity, it sends no snapshot, so ask for the reading. */
+    private void followLight(boolean wanted) {
+        if (wanted == lightFollowed) return;
+        lightFollowed = wanted;
+        lightRevision++;
+        lightPresent = null;
+        roomLux = null;
+        nightActive = null;
+        if (!wanted) {
+            host.unsubscribe(LIGHT_EVENT);
+            return;
+        }
+        host.subscribe(LIGHT_EVENT);
+        final int revision = lightRevision;
+        host.executeCommand("getLightLevel", Collections.emptyMap(), (ok, data, error) -> {
+            synchronized (lock) {
+                if (!alive || revision != lightRevision) return;
+                if (!ok || !(data instanceof Map)) {
+                    host.log("Could not read the light sensor: " + error);
+                    return;
+                }
+                Map<?, ?> level = (Map<?, ?>) data;
+                lightPresent = !Boolean.FALSE.equals(level.get("present"));
+                // A reading that arrived before this answer is the newer one.
+                if (roomLux == null && level.get("lux") instanceof Number) roomLux = ((Number) level.get("lux")).doubleValue();
+                updateNight();
+                publish();
+            }
+        });
+    }
+
+    private double lightLevel() {
+        return ClockOptions.number(settings.get("nightLux"), 5, 0, 10000);
+    }
+
+    /** The Read button under the level: the latest reading, shown under the button. */
+    private void readLight(String run) {
+        if (Boolean.FALSE.equals(lightPresent)) host.setupResult(run, "error", "This device has no light sensor.");
+        else if (roomLux == null) host.setupResult(run, "error", "No reading yet.");
+        else host.setupResult(run, "success", Math.round(roomLux) + " lx");
+    }
+
     @Override public void onEvent(String event, Map<String, Object> payload) {
+        if (event.equals("settings.button")) {
+            synchronized (lock) {
+                if ("readLight".equals(payload.get("id")) && payload.get("run") instanceof String) readLight((String) payload.get("run"));
+            }
+            return;
+        }
+        if (event.equals("ks." + LIGHT_EVENT)) {
+            synchronized (lock) {
+                if (!lightFollowed || !(payload.get("lux") instanceof Number)) return;
+                lightPresent = true;
+                roomLux = ((Number) payload.get("lux")).doubleValue();
+                updateNight();
+                publish();
+            }
+            return;
+        }
         if (!event.startsWith("ks.ha.entity.")) return;
         synchronized (lock) {
             String entity = event.substring("ks.ha.entity.".length());
@@ -148,9 +215,19 @@ public final class NightstandClockPlugin implements KioskPlugin {
     }
 
     private void updateNight() {
+        if (lightFollowed) {
+            if (roomLux != null) nightActive = isDark(roomLux, lightLevel(), Boolean.TRUE.equals(nightActive));
+            return;
+        }
         // An unavailable entity, such as during a Home Assistant restart, keeps the last known answer.
         Boolean night = isNight(nightSnapshot, ClockOptions.number(settings.get("nightThreshold"), 10, 0, 1000), nightActive);
         if (night != null) nightActive = night;
+    }
+
+    /** Night at or below the threshold, day above the threshold times {@link #LIGHT_MARGIN}. In between, no change. */
+    static boolean isDark(double lux, double threshold, boolean current) {
+        if (lux <= threshold) return true;
+        return lux <= threshold * LIGHT_MARGIN && current;
     }
 
     private static String today() {
@@ -286,6 +363,11 @@ public final class NightstandClockPlugin implements KioskPlugin {
         if (!nightEntity.isEmpty()) {
             status.append(nightActive == null ? " Waiting for " + nightEntity + "." : nightActive ? " Night mode on." : " Night mode off.");
         }
+        if (lightFollowed) {
+            if (Boolean.FALSE.equals(lightPresent)) status.append(" This device has no light sensor, so night mode stays off.");
+            else if (roomLux == null) status.append(" Waiting for the light sensor.");
+            else status.append(Boolean.TRUE.equals(nightActive) ? " Night mode on (" : " Night mode off (").append(Math.round(roomLux)).append(" lx).");
+        }
         if (!alarmEntity.isEmpty()) {
             status.append(!alarmKnown ? " Waiting for " + alarmEntity + "." : alarm == null ? " No alarm set." : " Next alarm: " + alarm + ".");
         }
@@ -305,6 +387,7 @@ public final class NightstandClockPlugin implements KioskPlugin {
             alive = false;
             // KS removes the screensaver and every subscription when the session ends.
             subscribed.clear();
+            lightFollowed = false;
             published = null;
             ending = timer;
             timer = null;

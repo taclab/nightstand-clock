@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.1
+
+- **Night mode from the room's light.** The new **Room light sensor** choice under **Night mode** follows the device's own light sensor, with no Home Assistant entity. **Room light level** sets the level, 5 lx by default, and a **Read** button just below it shows the sensor's current reading, which the plugin's status also follows. A device without a sensor stays in day mode and the plugin's status says why.
+- The Night mode settings now start with the color and the brightness, so the choices that depend on the mode sit together at the end.
+
 ## 1.5.0
 
 - **Date and calendar widget.** The day in large numbers under the weekday and the month, above a small calendar, as on the phone but on the clock's right like the other widgets. The widget takes the column the clock leaves, so a 16:10 screen such as the Echo Show 8 uses its extra height for a larger clock and a larger calendar. Night mode and every clock work with it.

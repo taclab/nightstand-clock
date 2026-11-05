@@ -24,6 +24,9 @@ public final class NightstandClockTest {
         final Set<String> subscriptions = new LinkedHashSet<>();
         final List<Map<String, Object>> calls = new ArrayList<>();
         CommandCallback pending;
+        final List<String> commands = new ArrayList<>();
+        CommandCallback light;
+        String setupState, setupMessage;
         String status;
         public synchronized void publishScreensaverAsset(String key, String title, String entry, Map<String, Object> data) {
             assert "standby".equals(key) && "Nightstand Clock".equals(title) && "standby/index.html".equals(entry);
@@ -36,6 +39,8 @@ public final class NightstandClockTest {
         public void subscribe(String event) { subscriptions.add(event); }
         public void unsubscribe(String event) { subscriptions.remove(event); }
         public void haCall(Map<String, Object> message, CommandCallback callback) { calls.add(message); pending = callback; }
+        public void executeCommand(String command, Map<String, Object> arguments, CommandCallback callback) { commands.add(command); light = callback; }
+        public boolean setupResult(String run, String state, String message) { assert "run1".equals(run); setupState = state; setupMessage = message; return true; }
         public void status(String message, boolean error) { status = message; }
         public void showWindow(String title, String message, String button) {}
         public void hideWindow() {}
@@ -50,6 +55,25 @@ public final class NightstandClockTest {
         payload.put("state", state);
         payload.put("attributes", attributes);
         return payload;
+    }
+
+    static Map<String, Object> lightLevel(boolean present, Object lux) {
+        Map<String, Object> level = new HashMap<>();
+        level.put("present", present);
+        level.put("lux", lux);
+        level.put("live", lux != null);
+        return level;
+    }
+
+    static Map<String, Object> reading(Object lux) {
+        return Collections.singletonMap("lux", lux);
+    }
+
+    static Map<String, Object> pressRead() {
+        Map<String, Object> press = new HashMap<>();
+        press.put("id", "readLight");
+        press.put("run", "run1");
+        return press;
     }
 
     static Map<String, Object> day(String date, Object high, Object low) {
@@ -235,7 +259,137 @@ public final class NightstandClockTest {
         host.settle();
         assert "2026-10-31T06:00:00+00:00".equals(host.options.get("alarm")) : "The analog clock shows the alarm too";
 
+        // The room light sensor replaces the night entity, and its first reading comes from getLightLevel.
+        settings.put("nightLux", 5);
+        settings.put("nightMode", "Room light sensor");
+        plugin.configure(settings);
+        host.settle();
+        assert host.subscriptions.contains("device.light") && !host.subscriptions.contains("ha.entity.sensor.lux") : host.subscriptions;
+        assert host.commands.equals(Arrays.asList("getLightLevel")) : host.commands;
+        assert "entity".equals(host.options.get("night")) && Boolean.FALSE.equals(host.options.get("nightActive"));
+        host.light.onResult(true, lightLevel(true, 3.0), null);
+        host.settle();
+        assert Boolean.TRUE.equals(host.options.get("nightActive"));
+        assert host.status.contains("Night mode on (3 lx)") : host.status;
+
+        // A level far above any room turns night on straight away, which is how to try it out.
+        plugin.onEvent("ks.device.light", reading(315));
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive"));
+        assert host.status.contains("Night mode off (315 lx)") : host.status;
+
+        // The Read button under the level shows the latest reading.
+        plugin.onEvent("settings.button", pressRead());
+        assert "success".equals(host.setupState) && "315 lx".equals(host.setupMessage) : host.setupMessage;
+        settings.put("nightLux", 10000);
+        plugin.configure(settings);
+        host.settle();
+        assert Boolean.TRUE.equals(host.options.get("nightActive"));
+        settings.put("nightLux", 5);
+        plugin.configure(settings);
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive"));
+        plugin.onEvent("ks.device.light", reading(3));
+        host.settle();
+
+        // Night holds up to 1.25 times the threshold, 6.25 lx here. Day holds down to the threshold.
+        plugin.onEvent("ks.device.light", reading(6.25));
+        host.settle();
+        assert Boolean.TRUE.equals(host.options.get("nightActive"));
+        plugin.onEvent("ks.device.light", reading(6.3));
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive"));
+        plugin.onEvent("ks.device.light", reading(5.5));
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive"));
+        plugin.onEvent("ks.device.light", reading(5));
+        host.settle();
+        assert Boolean.TRUE.equals(host.options.get("nightActive"));
+
+        // Readings that leave night mode as it is do not recreate the page.
+        plugin.onEvent("ks.device.light", reading(500));
+        host.settle();
+        published = host.publications;
+        plugin.onEvent("ks.device.light", reading(700));
+        plugin.onEvent("ks.device.light", reading(900));
+        host.settle();
+        assert host.publications == published : "A reading recreated the page";
+        assert host.status.contains("Night mode off (900 lx)") : host.status;
+
+        // A reading that makes no sense changes nothing.
+        plugin.onEvent("ks.device.light", reading("dark"));
+        assert host.status.contains("Night mode off (900 lx)") : host.status;
+
+        // Changing the level applies without a new reading, and back.
+        plugin.onEvent("ks.device.light", reading(8));
+        settings.put("nightLux", 10);
+        plugin.configure(settings);
+        host.settle();
+        assert Boolean.TRUE.equals(host.options.get("nightActive"));
+        settings.put("nightLux", 5);
+        plugin.configure(settings);
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive"));
+
+        // An unrelated change of settings does not read the sensor again.
+        assert host.commands.size() == 1 : host.commands;
+
+        // Leaving the mode drops the subscription, and a late answer or reading does not bring night back.
+        settings.put("nightMode", "Off");
+        plugin.configure(settings);
+        host.settle();
+        assert !host.subscriptions.contains("device.light") : host.subscriptions;
+        assert "off".equals(host.options.get("night"));
+        host.light.onResult(true, lightLevel(true, 1.0), null);
+        plugin.onEvent("ks.device.light", reading(1));
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive")) : "A reading counted after the mode was left";
+
+        // Back on the sensor, an answer that was already out of date loses to a newer reading.
+        settings.put("nightMode", "Room light sensor");
+        plugin.configure(settings);
+        assert host.commands.size() == 2 : host.commands;
+        plugin.onEvent("ks.device.light", reading(100));
+        host.light.onResult(true, lightLevel(true, 1.0), null);
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive")) : "An older answer replaced a newer reading";
+
+        // A device without a sensor stays in day mode and says why. So does a sensor that has not spoken, or a failed read.
+        settings.put("nightMode", "Off");
+        plugin.configure(settings);
+        settings.put("nightMode", "Room light sensor");
+        plugin.configure(settings);
+        host.light.onResult(true, lightLevel(false, null), null);
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive"));
+        assert host.status.contains("no light sensor") : host.status;
+        plugin.onEvent("settings.button", pressRead());
+        assert "error".equals(host.setupState) && host.setupMessage.contains("no light sensor") : host.setupMessage;
+        settings.put("nightMode", "Off");
+        plugin.configure(settings);
+        settings.put("nightMode", "Room light sensor");
+        plugin.configure(settings);
+        host.light.onResult(true, lightLevel(true, null), null);
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive"));
+        assert host.status.contains("Waiting for the light sensor") : host.status;
+        plugin.onEvent("settings.button", pressRead());
+        assert "error".equals(host.setupState) && "No reading yet.".equals(host.setupMessage) : host.setupMessage;
+        settings.put("nightMode", "Off");
+        plugin.configure(settings);
+        settings.put("nightMode", "Room light sensor");
+        plugin.configure(settings);
+        host.light.onResult(false, null, "unavailable");
+        host.settle();
+        assert Boolean.FALSE.equals(host.options.get("nightActive"));
+        // A reading after a failed read still works.
+        plugin.onEvent("ks.device.light", reading(1));
+        host.settle();
+        assert Boolean.TRUE.equals(host.options.get("nightActive"));
+        assert host.refused == 0 : "The plugin went over KS's budget " + host.refused + " times";
+
         // A late forecast after stop is ignored, and the plugin's thread is gone. Beside a widget there is no alarm.
+        settings.put("nightMode", "Home Assistant entity");
         settings.put("layout", "Clock and widget");
         plugin.configure(settings);
         host.settle();

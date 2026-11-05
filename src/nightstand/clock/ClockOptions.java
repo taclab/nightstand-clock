@@ -46,7 +46,7 @@ final class ClockOptions {
      * The page shows the high and the low only while weatherDate is still its own date, so they vanish at midnight. It
      * shows the alarm only when it rings within a day.
      */
-    static Map<String, Object> options(Map<String, Object> settings, Weather weather, Weather.Day today, Boolean nightEntityActive,
+    static Map<String, Object> options(Map<String, Object> settings, Weather weather, Weather.Day today, Boolean nightActive,
                                        String alarm) {
         Map<String, Object> data = new LinkedHashMap<>();
         boolean full = "Full screen clock".equals(choice(settings.get("layout"), "Clock and widget", "Clock and widget", "Full screen clock"));
@@ -66,11 +66,12 @@ final class ClockOptions {
         data.put("secondsColor", color(settings.get("secondsColor"), "#FF9F0A"));
         data.put("background", color(settings.get("backgroundColor"), "#000000"));
 
-        String night = choice(settings.get("nightMode"), "Off", "Off", "Always", "Schedule", "Home Assistant entity");
-        data.put("night", "Home Assistant entity".equals(night) ? "entity" : night.toLowerCase());
+        String night = choice(settings.get("nightMode"), "Off", "Off", "Always", "Schedule", "Room light sensor", "Home Assistant entity");
+        // The page follows nightActive for both: the plugin decides from the sensor or the entity.
+        data.put("night", "Home Assistant entity".equals(night) || "Room light sensor".equals(night) ? "entity" : night.toLowerCase());
         data.put("nightStart", (int) number(settings.get("nightStart"), 22, 0, 23));
         data.put("nightEnd", (int) number(settings.get("nightEnd"), 7, 0, 23));
-        data.put("nightActive", Boolean.TRUE.equals(nightEntityActive));
+        data.put("nightActive", Boolean.TRUE.equals(nightActive));
         data.put("nightColor", color(settings.get("nightColor"), "#FF2A1F"));
         data.put("nightBrightness", number(settings.get("nightBrightness"), 70, 20, 100));
 

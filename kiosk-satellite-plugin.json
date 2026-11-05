@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "nightstand-clock",
   "name": "Nightstand Clock",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "apiVersion": 1,
   "minAppVersion": "2026.10.30",
   "minAndroidSdk": 24,
@@ -161,9 +161,29 @@
       "type": "select",
       "title": "Night mode",
       "default": "Off",
-      "options": ["Off", "Always", "Schedule", "Home Assistant entity"],
+      "options": ["Off", "Always", "Schedule", "Room light sensor", "Home Assistant entity"],
       "group": "Night mode",
-      "description": "Draws everything in one dim color, red by default, so the screen does not light up the room."
+      "description": "Draws everything in one dim color, red by default, so the screen does not light up the room. Night mode can follow the hours you choose, the device's own light sensor or a Home Assistant entity."
+    },
+    {
+      "key": "nightColor",
+      "type": "color",
+      "title": "Night color",
+      "default": "#FF2A1F",
+      "group": "Night mode",
+      "visibleWhen": { "key": "nightMode", "notEquals": "Off" }
+    },
+    {
+      "key": "nightBrightness",
+      "type": "number",
+      "title": "Night brightness",
+      "default": 70,
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "group": "Night mode",
+      "description": "Percent. Dims the clock on top of the screensaver brightness.",
+      "visibleWhen": { "key": "nightMode", "notEquals": "Off" }
     },
     {
       "key": "nightStart",
@@ -211,24 +231,28 @@
       "visibleWhen": { "key": "nightMode", "equals": "Home Assistant entity" }
     },
     {
-      "key": "nightColor",
-      "type": "color",
-      "title": "Night color",
-      "default": "#FF2A1F",
-      "group": "Night mode",
-      "visibleWhen": { "key": "nightMode", "notEquals": "Off" }
-    },
-    {
-      "key": "nightBrightness",
+      "key": "nightLux",
       "type": "number",
-      "title": "Night brightness",
-      "default": 70,
-      "min": 20,
-      "max": 100,
-      "step": 5,
+      "title": "Room light level",
+      "default": 5,
+      "min": 0,
+      "max": 10000,
+      "step": 1,
+      "input": "field",
+      "unit": "lx",
       "group": "Night mode",
-      "description": "Percent. Dims the clock on top of the screensaver brightness.",
-      "visibleWhen": { "key": "nightMode", "notEquals": "Off" }
+      "description": "Night starts at or below this level and ends above 1.25 times it, so a flickering reading does not switch back and forth. To try it, type a level above the current reading.",
+      "visibleWhen": { "key": "nightMode", "equals": "Room light sensor" }
+    }
+  ],
+  "buttons": [
+    {
+      "id": "readLight",
+      "title": "Room light now",
+      "label": "Read",
+      "group": "Night mode",
+      "description": "The sensor's current reading, to help choose the level.",
+      "visibleWhen": { "key": "nightMode", "equals": "Room light sensor" }
     }
   ],
   "commands": []
