@@ -65,6 +65,26 @@ html, body {
     height: min(100vw - 8vmin, 50vh - 6vmin);
   }
 }
+/* The widget takes the column the clock leaves. A very wide screen, such as 2:1, keeps the clock larger. A taller one,
+   such as 16:10, has the height to spare and gives the widget a wider column, which also makes it larger. */
+@media (orientation: landscape) {
+  #root.large-clock #clock {
+    width: min(54vw, (100vh - 8vmin) * 0.96);
+    height: min(54vw, (100vh - 8vmin) * 0.96);
+  }
+  #root.large-clock #widget {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: calc(100vh - 8vmin);
+  }
+}
+@media (orientation: landscape) and (max-aspect-ratio: 9/5) {
+  #root.large-clock #clock {
+    width: min(50vw, (100vh - 8vmin) * 0.92);
+    height: min(50vw, (100vh - 8vmin) * 0.92);
+  }
+}
 #root.alone .panel {
   width: min(100vw - 8vmin, 100vh - 8vmin);
   height: min(100vw - 8vmin, 100vh - 8vmin);

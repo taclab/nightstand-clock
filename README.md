@@ -4,7 +4,9 @@ A bedside clock screensaver for [Kiosk Satellite](https://github.com/jxlarrea/ki
 
 ## Screenshots
 
-Captured at 960 × 480, the screen of an Echo Show 5 (1st and 2nd generation).
+### Echo Show 5
+
+Captured at 960 × 480, the screen of the 1st and 2nd generation.
 
 | | |
 | --- | --- |
@@ -19,6 +21,15 @@ Captured at 960 × 480, the screen of an Echo Show 5 (1st and 2nd generation).
 | ![Analog clock and calendar at night](docs/screenshots/analog-calendar-night.png) | ![Full screen analog clock at night](docs/screenshots/full-analog-night.png) |
 | Night mode | Night mode, full screen |
 
+### Echo Show 8
+
+Captured at 1280 × 800, the screen of the 1st and 2nd generation. The Date and calendar widget uses the extra height for a larger clock and a larger calendar.
+
+| | |
+| --- | --- |
+| ![Analog clock with the date and the calendar](docs/screenshots/analog-date-calendar-show8.png) | ![Round analog clock with the date and the calendar](docs/screenshots/round-date-calendar-show8.png) |
+| Analog, Date and calendar | Analog round, Date and calendar (Français) |
+
 ## Looks
 
 | Layout | Clock | Beside it |
@@ -26,6 +37,7 @@ Captured at 960 × 480, the screen of an Echo Show 5 (1st and 2nd generation).
 | Clock and widget | **Analog**: square dial with 12, 3, 6 and 9 | **Calendar**: the month with today circled |
 | | **Analog round**: circular dial with every hour | **Weather**: place, temperature, condition, today's high and low |
 | | **Digital**: large numbers in a ring of ticks that fill with the seconds | **Date**: weekday, day and month |
+| | | **Date and calendar**: the day in large numbers above a small month |
 | | | **None**: the clock alone, centered |
 | Full screen clock | **Analog**: ticks out to the screen edges, the date inside the dial and the next alarm opposite it | |
 | | **Digital**: large numbers with a column beside them: the date, the temperature and the next alarm | |
@@ -46,7 +58,7 @@ Kiosk Satellite still decides when the screensaver starts and stops, its brightn
 | --- | --- | --- |
 | Layout | Layout | Clock and widget, or Full screen clock |
 | | Clock | Analog, Analog round or Digital, beside a widget |
-| | Widget | Calendar, Weather, Date or None |
+| | Widget | Calendar, Weather, Date, Date and calendar or None |
 | | Full screen clock | Analog or Digital |
 | Time and date | Show seconds | Second hand on analog clocks, the ring of seconds on the digital one |
 | | Second hand | On analog clocks. Smooth at 60 fps is the most fluid sweep. Smooth at 30 fps is a touch less fluid and uses less processor. Ticking moves once a second, like a quartz watch, and uses almost nothing |
@@ -80,7 +92,7 @@ It sends nothing anywhere else. The screensaver page has no network access. The 
 ## Tested on
 
 - Echo Show 5 (1st and 2nd generation), 960 × 480, with Kiosk Satellite and SDK 1.
-- Desktop Chrome at 960 × 480 and 480 × 960 for the screenshots.
+- Desktop Chrome at 960 × 480 and 480 × 960 for the screenshots, and at 1280 × 800, the screen of an Echo Show 8 (1st and 2nd generation), for the Date and calendar widget. Not yet tried on an Echo Show 8 itself.
 
 The plugin needs Kiosk Satellite 2026.10.30 or newer. The page needs a WebView based on Chrome 79 or newer, for CSS `min()`. Older Android 7 devices that never updated their WebView may not lay it out correctly. Please include the device, the Kiosk Satellite version and the WebView version (**Settings > Apps > Android System WebView**) when reporting a problem, with the plugin's settings.
 

@@ -15,7 +15,7 @@
 
   var o = {
     layout: pick(options.layout, ['widget', 'full'], 'widget'),
-    widget: pick(options.widget, ['calendar', 'weather', 'date', 'none'], 'calendar'),
+    widget: pick(options.widget, ['calendar', 'date-calendar', 'weather', 'date', 'none'], 'calendar'),
     seconds: options.seconds !== false,
     secondHand: pick(options.secondHand, ['60', '30', 'tick'], '30'),
     night: pick(options.night, ['off', 'always', 'schedule', 'entity'], 'off'),
@@ -481,30 +481,74 @@
     }
   }
 
+  /** How many weeks this month spreads over, from the first day of the week. */
+  function monthRows(now) {
+    var offset = (new Date(now.getFullYear(), now.getMonth(), 1).getDay() - firstDay + 7) % 7;
+    return Math.ceil((offset + new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()) / 7);
+  }
+  /** The month's name, the days of the week and the days, with today circled. The sizes come from the widget. */
+  function monthGrid(root, now, g) {
+    var year = now.getFullYear(), month = now.getMonth();
+    text(root, g.monthX, g.monthY, upper(format(now, { month: 'long' })), g.monthSize, 550, 'accent', 'start');
+    for (var c = 0; c < 7; c++) {
+      var weekday = (firstDay + c) % 7, x = g.left + g.column * (c + 0.5);
+      var sample = new Date(2023, 0, 1 + weekday); // 1 January 2023 was a Sunday.
+      text(root, x, g.weekdayY, upper(format(sample, { weekday: 'narrow' })), g.weekdaySize, 600, 'fill' + (weekday % 6 === 0 ? ' dim' : ' soft'));
+    }
+    var offset = (new Date(year, month, 1).getDay() - firstDay + 7) % 7, days = new Date(year, month + 1, 0).getDate();
+    for (var d = 1; d <= days; d++) {
+      var cell = offset + d - 1, cx = g.left + g.column * (cell % 7 + 0.5), cy = g.firstY + Math.floor(cell / 7) * g.rowHeight;
+      var dayOfWeek = new Date(year, month, d).getDay();
+      if (d === now.getDate()) {
+        add(root, 'circle', { cx: cx, cy: cy, r: g.radius, 'class': 'accent' });
+        text(root, cx, cy, String(d), g.digit, 500, 'today-text');
+      } else {
+        text(root, cx, cy, String(d), g.digit, 450, 'fill' + (dayOfWeek % 6 === 0 ? ' dim' : ' soft'));
+      }
+    }
+  }
+
   var widgets = {
     'calendar': function (panel, now) {
       var root = svg(panel, '0 0 200 200');
-      var column = 200 / 7, year = now.getFullYear(), month = now.getMonth();
+      var column = 200 / 7;
       // Sizes measured on the phone's calendar: digits about 45% of a column, in a regular weight.
-      text(root, column / 2 - 6, 14, upper(format(now, { month: 'long' })), 16, 550, 'accent', 'start');
-      for (var c = 0; c < 7; c++) {
-        var weekday = (firstDay + c) % 7, x = column * (c + 0.5);
-        var sample = new Date(2023, 0, 1 + weekday); // 1 January 2023 was a Sunday.
-        text(root, x, 44, upper(format(sample, { weekday: 'narrow' })), 12, 600, 'fill' + (weekday % 6 === 0 ? ' dim' : ' soft'));
-      }
-      var offset = (new Date(year, month, 1).getDay() - firstDay + 7) % 7;
-      var days = new Date(year, month + 1, 0).getDate(), rows = Math.ceil((offset + days) / 7);
-      var rowHeight = rows > 5 ? 24.5 : 28;
-      for (var d = 1; d <= days; d++) {
-        var cell = offset + d - 1, cx = column * (cell % 7 + 0.5), cy = 72 + Math.floor(cell / 7) * rowHeight;
-        var dayOfWeek = new Date(year, month, d).getDay();
-        if (d === now.getDate()) {
-          add(root, 'circle', { cx: cx, cy: cy, r: 11, 'class': 'accent' });
-          text(root, cx, cy, String(d), 13, 500, 'today-text');
-        } else {
-          text(root, cx, cy, String(d), 13, 450, 'fill' + (dayOfWeek % 6 === 0 ? ' dim' : ' soft'));
-        }
-      }
+      monthGrid(root, now, {
+        left: 0, column: column, monthX: column / 2 - 6, monthY: 14, monthSize: 16, weekdayY: 44, weekdaySize: 12,
+        firstY: 72, rowHeight: monthRows(now) > 5 ? 24.5 : 28, radius: 11, digit: 13
+      });
+    },
+    'date-calendar': function (panel, now) {
+      // The day above a small month, as on the phone. The panel takes what the clock leaves, so draw to its real size.
+      var width = panel.clientWidth || innerWidth, height = panel.clientHeight || innerHeight;
+      var root = svg(panel, '0 0 ' + width + ' ' + height);
+      // In units of a 200 wide block: the header, the day's digits, the gap below them, then the month.
+      var header = 28, digits = 52, gap = 12, rowHeight = 19, grid = 49 + rowHeight * (monthRows(now) - 1);
+      // Beside the clock, the block starts level with the top of the dial, as on the phone. Stacked, it stays centered.
+      var clockBox = clockPanel.getBoundingClientRect(), box = panel.getBoundingClientRect();
+      var beside = clockBox.right <= box.left + 1;
+      var dialTop = beside ? clockBox.top - box.top + clockBox.height * (o.clock === 'analog-round' ? 0.046 : 0.01) : 0;
+      var room = height - dialTop;
+      var unit = Math.min(width / 200, room / (header + digits + gap + grid));
+      // A tall screen spends its spare height on the proportions of the phone: digits about four calendar rows tall,
+      // with more than a row of air below them.
+      var spare = room / unit - (header + digits + gap + grid), glyph = 0.73;
+      var share = Math.min(1, spare / (rowHeight * 4 - digits + rowHeight * 1.6 - gap));
+      digits += (rowHeight * 4 - digits) * share;
+      gap += (rowHeight * 1.6 - gap) * share;
+      var size = unit * digits / glyph;
+      var used = unit * (header + gap + grid) + size * glyph;
+      // The header's capitals rise about 2.6 units above the top of the block's first line.
+      var top = beside ? dialTop - unit * 2.6 : (height - used) / 2, left = (width - unit * 200) / 2, middle = width / 2;
+      var label = text(root, middle, top + unit * header * 0.4, capitalized(format(now, { weekday: 'short' })).replace(/\.$/, '') + ' ', unit * 24, 600, 'accent');
+      add(label, 'tspan', { 'class': 'fill' }).textContent = capitalized(format(now, { month: 'short' })).replace(/\.$/, '');
+      text(root, middle, top + unit * header + size * glyph / 2, String(now.getDate()), size, 600, 'fill dial');
+      var month = top + unit * (header + gap) + size * glyph, column = unit * 200 / 7;
+      monthGrid(root, now, {
+        left: left, column: column, monthX: left + column / 2 - unit * 5, monthY: month + unit * 6, monthSize: unit * 11,
+        weekdayY: month + unit * 24, weekdaySize: unit * 8.5, firstY: month + unit * 39, rowHeight: unit * rowHeight,
+        radius: unit * 8, digit: unit * 10
+      });
     },
     'date': function (panel, now) {
       var root = svg(panel, '0 0 200 200');
@@ -549,7 +593,7 @@
 
   function build() {
     var now = new Date();
-    root.className = o.layout === 'full' ? 'full' : o.widget === 'none' ? 'alone' : '';
+    root.className = o.layout === 'full' ? 'full' : o.widget === 'none' ? 'alone' : o.widget === 'date-calendar' ? 'large-clock' : '';
     if (sweep) sweep.cancel();
     sweep = ticking = null;
     clockPanel.textContent = '';

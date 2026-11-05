@@ -54,7 +54,7 @@ final class ClockOptions {
         data.put("clock", full
             ? choice(settings.get("fullscreenStyle"), "Analog", "Analog", "Digital").toLowerCase()
             : choice(settings.get("clockStyle"), "Analog", "Analog", "Analog round", "Digital").toLowerCase().replace(' ', '-'));
-        data.put("widget", choice(settings.get("widget"), "Calendar", "Calendar", "Weather", "Date", "None").toLowerCase());
+        data.put("widget", choice(settings.get("widget"), "Calendar", "Calendar", "Weather", "Date", "Date and calendar", "None").toLowerCase().replace(" and ", "-"));
         data.put("seconds", !Boolean.FALSE.equals(settings.get("showSeconds")));
         String hand = choice(settings.get("secondHand"), "Smooth, 30 fps", "Smooth, 60 fps", "Smooth, 30 fps", "Ticking");
         data.put("secondHand", hand.equals("Ticking") ? "tick" : hand.equals("Smooth, 60 fps") ? "60" : "30");

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "nightstand-clock",
   "name": "Nightstand Clock",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "apiVersion": 1,
   "minAppVersion": "2026.10.30",
   "minAndroidSdk": 24,
@@ -41,9 +41,9 @@
       "type": "select",
       "title": "Widget",
       "default": "Calendar",
-      "options": ["Calendar", "Weather", "Date", "None"],
+      "options": ["Calendar", "Weather", "Date", "Date and calendar", "None"],
       "group": "Layout",
-      "description": "What shows beside the clock. None centers the clock alone.",
+      "description": "What shows beside the clock. Date and calendar shows the day in large numbers above a small month. None centers the clock alone.",
       "visibleWhen": { "key": "layout", "equals": "Clock and widget" }
     },
     {

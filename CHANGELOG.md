@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.0
+
+- **Date and calendar widget.** The day in large numbers under the weekday and the month, above a small calendar, as on the phone but on the clock's right like the other widgets. The widget takes the column the clock leaves, so a 16:10 screen such as the Echo Show 8 uses its extra height for a larger clock and a larger calendar. Night mode and every clock work with it.
+
 ## 1.4.0
 
 - **Next alarm on the full screen clocks.** Choose the kiosk's Next alarm sensor under the new **Alarm** setting. The full screen analog clock shows the alarm opposite the date, after the 9. Like the phone, it shows only when the alarm rings within a day.

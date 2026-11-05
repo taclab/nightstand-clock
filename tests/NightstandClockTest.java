@@ -102,6 +102,15 @@ public final class NightstandClockTest {
         host.settle();
         assert "60".equals(host.options.get("secondHand"));
 
+        // The widget's name reaches the page in the form it expects.
+        settings.put("widget", "Date and calendar");
+        plugin.configure(settings);
+        host.settle();
+        assert "date-calendar".equals(host.options.get("widget")) : host.options.get("widget");
+        settings.put("widget", "Calendar");
+        plugin.configure(settings);
+        host.settle();
+
         // Unchanged settings do not recreate the page.
         int published = host.publications;
         plugin.configure(settings);
