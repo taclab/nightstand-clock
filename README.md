@@ -35,7 +35,7 @@ Captured at 1280 × 800, the screen of the 1st and 2nd generation. The Date and 
 | Layout | Clock | Beside it |
 | --- | --- | --- |
 | Clock and widget | **Analog**: square dial with 12, 3, 6 and 9 | **Calendar**: the month with today circled |
-| | **Analog round**: circular dial with every hour | **Weather**: place, temperature, condition, today's high and low |
+| | **Analog round**: circular dial with every hour | **Weather**: place, temperature, optionally feels like, condition, today's high and low |
 | | **Digital**: large numbers in a ring of ticks that fill with the seconds | **Date**: weekday, day and month |
 | | | **Date and calendar**: the day in large numbers above a small month |
 | | | **None**: the clock alone, centered |
@@ -71,6 +71,7 @@ Kiosk Satellite still decides when the screensaver starts and stops, its brightn
 | | Background color | Black by default, best on OLED screens. Night mode always uses black |
 | Weather | Weather entity | A Home Assistant `weather.*` entity for the Weather widget and the full screen digital clock |
 | | Place name | Shown above the temperature. Empty uses the entity's name |
+| | Feels like | The apparent temperature under the current one in the Weather widget, when the entity's integration provides it. Off by default |
 | Alarm | Next alarm entity | The kiosk's **Next alarm** sensor, which Kiosk Satellite adds to its ESPHome device in Home Assistant with **Expose kiosk entities** on. Only the full screen clocks show the alarm, when it rings within a day |
 | Night mode | Night mode | Off, Always, Schedule, Room light sensor or Home Assistant entity |
 | | Night starts at / ends at | Hours for Schedule, such as 22 to 7 |

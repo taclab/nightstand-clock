@@ -149,6 +149,14 @@
       "description": "Shown above the temperature. Empty uses the entity's name."
     },
     {
+      "key": "showFeelsLike",
+      "type": "boolean",
+      "title": "Feels like",
+      "default": false,
+      "group": "Weather",
+      "description": "Shows the apparent temperature under the current one in the Weather widget, when the entity's integration provides it."
+    },
+    {
       "key": "alarmEntity",
       "type": "entity",
       "title": "Next alarm entity",

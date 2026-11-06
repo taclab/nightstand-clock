@@ -92,6 +92,7 @@
   var WORDS = {
     high: ['H:', 'H:', 'H:', 'Máx:', 'Max:', 'Máx:', 'H:'],
     low: ['L:', 'B:', 'T:', 'Mín:', 'Min:', 'Mín:', 'L:'],
+    feelsLike: ['Feels like', 'Ressenti', 'Gefühlt', 'Sensación', 'Percepita', 'Sensação', 'Voelt als'],
     weather: ['Weather', 'Météo', 'Wetter', 'Tiempo', 'Meteo', 'Tempo', 'Weer'],
     choose: ['Choose a weather entity in the plugin settings.', 'Choisissez une entité météo dans les réglages du plugin.',
       'Wählen Sie eine Wetter-Entität in den Plugin-Einstellungen.', 'Elija una entidad meteorológica en los ajustes del plugin.',
@@ -572,6 +573,10 @@
       text(root, 0, 86, temperature, 92, 500, 'fill', 'start').setAttribute('letter-spacing', '-4');
       var condition = typeof options.weatherCondition === 'string' ? options.weatherCondition : '';
       if (condition) weatherIcon(root, condition, 6, 134, 26);
+      // The plugin sends the apparent temperature only when Feels like is on. It sits beside the icon.
+      if (typeof options.weatherFeelsLike === 'number') {
+        text(root, 42, 148, word('feelsLike') + ' ' + degrees(options.weatherFeelsLike), 17, 600, 'fill soft', 'start');
+      }
       text(root, 6, 174, conditionName(condition), 17, 700, 'fill', 'start');
       // The plugin sends the day its high and low belong to. They go once that day is over.
       if (options.weatherDate === isoDate(now) && typeof options.weatherHigh === 'number' && typeof options.weatherLow === 'number') {
