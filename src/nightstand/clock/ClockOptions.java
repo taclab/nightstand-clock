@@ -80,6 +80,7 @@ final class ClockOptions {
         data.put("weatherPlace", place.isEmpty() && weather != null ? weather.name : place);
         data.put("weatherCondition", weather == null ? null : weather.condition);
         data.put("weatherTemperature", weather == null ? null : weather.temperature);
+        data.put("weatherFeelsLike", weather != null && Boolean.TRUE.equals(settings.get("showFeelsLike")) ? weather.feelsLike : null);
         data.put("weatherUnit", weather == null ? null : weather.unit);
         boolean extremes = weather != null && today != null;
         data.put("weatherDate", extremes ? today.date : null);

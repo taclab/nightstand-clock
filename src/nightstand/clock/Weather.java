@@ -25,14 +25,17 @@ final class Weather {
     final String name;
     final String condition;
     final Double temperature;
+    /** The apparent temperature, null when the integration does not provide one. */
+    final Double feelsLike;
     final String unit;
     /** Today from the entity's own forecast attribute, which only older integrations still fill. */
     final Day today;
 
-    Weather(String name, String condition, Double temperature, String unit, Day today) {
+    Weather(String name, String condition, Double temperature, Double feelsLike, String unit, Day today) {
         this.name = name;
         this.condition = condition;
         this.temperature = temperature;
+        this.feelsLike = feelsLike;
         this.unit = unit;
         this.today = today;
     }
@@ -49,7 +52,8 @@ final class Weather {
         Map<?, ?> attributes = snapshot.get("attributes") instanceof Map ? (Map<?, ?>) snapshot.get("attributes") : null;
         if (!(state instanceof String) || attributes == null) return null;
         return new Weather(string(attributes.get("friendly_name")), (String) state,
-            number(attributes.get("temperature")), string(attributes.get("temperature_unit")), day(attributes.get("forecast"), today));
+            number(attributes.get("temperature")), number(attributes.get("apparent_temperature")),
+            string(attributes.get("temperature_unit")), day(attributes.get("forecast"), today));
     }
 
     /** The response of weather.get_forecasts for one entity: the entry for today, or null. */

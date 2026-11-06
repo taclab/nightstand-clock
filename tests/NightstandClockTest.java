@@ -184,6 +184,23 @@ public final class NightstandClockTest {
         host.settle();
         assert "Bath".equals(host.options.get("weatherPlace"));
 
+        // Feels like reaches the page only while it is on and the entity has an apparent temperature.
+        attributes.put("apparent_temperature", 17.6);
+        plugin.onEvent("ks.ha.entity.weather.home", snapshot("sunny", attributes));
+        host.settle();
+        assert host.options.get("weatherFeelsLike") == null : "Feels like shows while it is off";
+        settings.put("showFeelsLike", true);
+        plugin.configure(settings);
+        host.settle();
+        assert Double.valueOf(17.6).equals(host.options.get("weatherFeelsLike")) : host.options;
+        attributes.remove("apparent_temperature");
+        plugin.onEvent("ks.ha.entity.weather.home", snapshot("sunny", attributes));
+        host.settle();
+        assert host.options.get("weatherFeelsLike") == null : host.options;
+        settings.remove("showFeelsLike");
+        plugin.configure(settings);
+        host.settle();
+
         // Night mode follows a numeric entity against the threshold.
         settings.put("nightMode", "Home Assistant entity");
         plugin.configure(settings);

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Feels like.** A new **Feels like** setting under **Weather** shows the entity's apparent temperature under the current one in the Weather widget, such as "Feels like 14°", in the page's language. It is off by default, and nothing shows when the weather integration does not provide `apparent_temperature`.
+
 ## 1.5.1
 
 - **Night mode from the room's light.** The new **Room light sensor** choice under **Night mode** follows the device's own light sensor, with no Home Assistant entity. **Room light level** sets the level, 5 lx by default, and a **Read** button just below it shows the sensor's current reading, which the plugin's status also follows. A device without a sensor stays in day mode and the plugin's status says why.
