@@ -10,6 +10,8 @@ import zipfile
 
 import community_plugins as cp
 
+cp.RELEASE_LIST_RETRY_SECONDS = 0
+
 REPO = 'alice/kiosk-weather'
 TAG = 'v1.2.0'
 SHA = 'a' * 40
@@ -20,9 +22,11 @@ def manifest(**overrides):
         'schemaVersion': 1, 'apiVersion': 1, 'id': 'weather', 'name': 'Weather', 'version': '1.2.0',
         'entryClass': 'me.alice.weather.WeatherPlugin', 'minAndroidSdk': 26, 'capabilities': ['overlay'],
         'description': 'Shows the weather.', 'author': 'Alice', 'license': 'MIT', 'settings': [],
+        'minAppVersion': '2026.10.40',
     }
     data.update(overrides)
-    return data
+    # None leaves the field out.
+    return {k: v for k, v in data.items() if v is not None}
 
 
 def jar(files=None):
@@ -62,6 +66,8 @@ class FakeGitHub:
         self.zip = zip_bytes or package(self.manifest)
         self.members = set(members)
         self.downloaded = []
+        # How many release list requests answer with an empty page first, as GitHub sometimes does.
+        self.empty_release_lists = 0
         digest = hashlib.sha256(self.zip).hexdigest()
         name = f'{self.manifest["id"]}-{self.manifest["version"]}.zip'
         self.repo = {
@@ -90,10 +96,15 @@ class FakeGitHub:
         if path == f'/repos/{REPO}/releases/latest':
             return self.release
         if path.startswith(f'/repos/{REPO}/releases?'):
+            if self.empty_release_lists:
+                self.empty_release_lists -= 1
+                return []
             older = {'assets': [{'name': 'weather-1.1.0.zip', 'download_count': 12}, {'name': 'weather-1.1.0.zip.sha256', 'download_count': 99}]}
             return [self.release, older]
         if path == f'/repos/{REPO}/commits/refs/tags/{TAG}':
             return SHA.encode()
+        if path == f'/repos/{cp.APP_REPOSITORY}/releases/tags/2026.10.40':
+            return {'draft': False, 'prerelease': False, 'tag_name': '2026.10.40'}
         raise LookupError(path)
 
     def get(self, url, limit, accept=None):
@@ -123,6 +134,8 @@ class ManifestTest(unittest.TestCase):
     def test_valid_manifest(self):
         cp.validate_manifest(manifest())
         cp.validate_manifest(manifest(capabilities=['camera', 'barcode', 'ma']))
+        cp.validate_manifest(manifest(capabilities=['screensaver', 'screensaver.mode']))
+        cp.validate_manifest(manifest(settings=[{'key': 'tap', 'title': 'Tap', 'type': 'action', 'default': {}}]))
 
     def test_rules_from_the_app(self):
         for change in [
@@ -130,8 +143,11 @@ class ManifestTest(unittest.TestCase):
             {'minAndroidSdk': 23}, {'capabilities': ['microphone']}, {'capabilities': ['noise']},
             {'capabilities': ['voice.skin', 'overlay']}, {'author': ' '}, {'headless': 'yes'},
             {'voiceSkinThumbnail': 'thumb.png'}, {'settings': [{'key': 'a', 'title': 'A', 'type': 'secret', 'default': 'x'}]},
+            {'settings': [{'key': 'a', 'title': 'A', 'type': 'action', 'default': {'type': 'refresh'}}]},
             {'settings': [{'key': 'a', 'title': 'A', 'type': 'string'}, {'key': 'a', 'title': 'B', 'type': 'string'}]},
             {'commands': [{'id': 'Run', 'title': 'Run'}]}, {'buttons': [{'id': 'test', 'title': 'Test'}]},
+            {'minAppVersion': '2026.10'}, {'minAppVersion': '2026.09.1'}, {'minAppVersion': 'v2026.10.40'},
+            {'minAppVersion': '2026.10.40-beta'}, {'minAppVersion': 2026},
         ]:
             with self.subTest(change=change), self.assertRaises(ValueError):
                 cp.validate_manifest(manifest(**change))
@@ -229,6 +245,17 @@ class SubmissionTest(unittest.TestCase):
         github.files[f'https://github.com/{REPO}/releases/download/{TAG}/{name}'] = package(manifest(name='Other'))
         self.assertIn('checksum', cp.check_submission(github, REPO, 'alice', 'x', [])[0]['package'])
 
+    def test_a_submission_names_a_published_kiosk_satellite_release(self):
+        results, _ = cp.check_submission(FakeGitHub(manifest(minAppVersion=None)), REPO, 'alice', 'x', [])
+        self.assertIn('Add minAppVersion', results['appVersion'])
+        self.assertTrue(all(error is None for step, error in results.items() if step != 'appVersion'), results)
+        results, _ = cp.check_submission(FakeGitHub(manifest(minAppVersion='2026.10.99')), REPO, 'alice', 'x', [])
+        self.assertEqual(results['appVersion'], 'Kiosk Satellite 2026.10.99 is not a published release')
+        github = FakeGitHub(manifest(minAppVersion='Weather'))
+        results, _ = cp.check_submission(github, REPO, 'alice', 'x', [])
+        self.assertIn('Invalid minAppVersion', results['manifest'])
+        self.assertEqual(results['appVersion'], 'Not checked')
+
     def test_reads_the_issue_form(self):
         body = '### Repository\n\nhttps://github.com/alice/kiosk-weather\n\n### Anything else\n\n_No response_\n'
         self.assertEqual(cp.form_field(body, 'Repository'), 'https://github.com/alice/kiosk-weather')
@@ -255,6 +282,11 @@ class IndexTest(unittest.TestCase):
         self.assertEqual((plugin['status'], plugin['stars'], plugin['downloads'], plugin['installs']), ('ok', 9, 42, 41))
         self.assertEqual(plugin['added'], '2026-10-02')
 
+    def test_listed_plugins_may_go_without_a_minimum_app_version(self):
+        self.assertEqual(cp.build_index(FakeGitHub(), self.entries)['plugins'][0]['minAppVersion'], '2026.10.40')
+        plugin = cp.build_index(FakeGitHub(manifest(minAppVersion=None)), self.entries)['plugins'][0]
+        self.assertEqual((plugin['status'], plugin['minAppVersion']), ('ok', None))
+
     def test_small_install_counts_stay_hidden(self):
         self.assertIsNone(cp.build_index(FakeGitHub(), self.entries, installs={'weather': 4})['plugins'][0]['installs'])
 
@@ -263,6 +295,20 @@ class IndexTest(unittest.TestCase):
         github = FakeGitHub()
         cp.build_index(github, self.entries, previous=first)
         self.assertFalse(any(url.endswith('.zip') for url in github.downloaded))
+
+    def test_an_empty_release_list_is_asked_again(self):
+        github = FakeGitHub()
+        github.empty_release_lists = 2
+        self.assertEqual(cp.build_index(github, self.entries)['plugins'][0]['downloads'], 42)
+
+    def test_downloads_never_drop_below_the_last_refresh(self):
+        first = cp.build_index(FakeGitHub(), self.entries)
+        first['plugins'][0]['downloads'] = 50
+        github = FakeGitHub()
+        github.empty_release_lists = cp.RELEASE_LIST_ATTEMPTS
+        self.assertEqual(cp.build_index(github, self.entries, previous=first)['plugins'][0]['downloads'], 50)
+        # A lower count from GitHub keeps the higher one too.
+        self.assertEqual(cp.build_index(FakeGitHub(), self.entries, previous=first)['plugins'][0]['downloads'], 50)
 
     def test_a_broken_plugin_keeps_its_last_listing(self):
         first = cp.build_index(FakeGitHub(), self.entries)

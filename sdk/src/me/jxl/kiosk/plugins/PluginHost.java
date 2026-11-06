@@ -21,7 +21,7 @@ public interface PluginHost {
         default void onClosed(String reason) {}
     }
 
-    /** SDK 1, host.read or host.control. Asynchronous documented KS commands. */
+    /** SDK 1, host.read, host.control or screensaver.mode. Asynchronous documented KS commands. */
     default void executeCommand(String command, Map<String, Object> arguments, CommandCallback callback) { throw new UnsupportedOperationException("SDK 1 required"); }
     /** SDK 1, host.read. Events arrive through onEvent("ks." + event, payload). */
     default void subscribe(String event) { throw new UnsupportedOperationException("SDK 1 required"); }
@@ -83,6 +83,18 @@ public interface PluginHost {
     default void publishScreensaver(String key, String title, String html) { throw new UnsupportedOperationException("Screensavers are unavailable"); }
     /** SDK 1, screensaver. Register an HTML path relative to assets/ with scalar JSON data. Assets load on demand. */
     default void publishScreensaverAsset(String key, String title, String entry, Map<String, Object> data) { throw new UnsupportedOperationException("Screensaver assets are unavailable"); }
+    /**
+     * SDK 1, screensaver. Register a native screensaver drawn by an Android view, under the same keys and limits as
+     * the HTML renderers, replacing any renderer with this key. Does not activate it. While the screensaver shows it,
+     * KS builds the view through the factory on the main thread to fill the screen, with the KS theme and UI scale.
+     * Touches stay with KS. onDestroy means the screensaver is gone, so stop updating the view.
+     */
+    default void publishScreensaverView(String key, String title, OverlayFactory factory) { throw new UnsupportedOperationException("Native screensavers are unavailable"); }
+    /**
+     * SDK 1, screensaver. As above, but with touch true single taps reach the view and a double tap closes the
+     * screensaver. Draw your own hint, such as "Double tap to close". Older KS releases throw.
+     */
+    default void publishScreensaverView(String key, String title, OverlayFactory factory, boolean touch) { throw new UnsupportedOperationException("Touch screensavers are unavailable"); }
     /** SDK 1, screensaver. Remove a renderer. KS retains the session with a black background. */
     default void removeScreensaver(String key) { throw new UnsupportedOperationException("Screensavers are unavailable"); }
     /** Publish a bounded chart snapshot. SDK 1. */
@@ -95,6 +107,13 @@ public interface PluginHost {
     default void removeStatusTile(String key) { throw new UnsupportedOperationException("Status tiles are unavailable"); }
     /** SDK 1. Fire a trigger declared in the manifest. Gestures mapped to it run their actions. At most four per second, extras are dropped. */
     default void fireTrigger(String id) { throw new UnsupportedOperationException("Gesture triggers are unavailable"); }
+    /**
+     * SDK 1. Run the action the user chose in an "action" setting. The setting is its key, or for a list row field
+     * the list key, the row index and the field key joined by dots, such as "items.2.action". The callback hears
+     * ok=false with an error when nothing is chosen, Lockdown Mode is on or the action fails. At most four per
+     * second. Plugins cannot change action settings, so only the user decides what runs.
+     */
+    default void runAction(String setting, CommandCallback callback) { throw new UnsupportedOperationException("Action settings are unavailable"); }
     /** SDK 1, overlay. Show a native overlay, or replace the one with this key. Never blocks: KS builds its view later on the main thread through the factory. At most four per plugin. */
     default void showOverlay(String key, OverlaySpec spec, OverlayFactory factory) { throw new UnsupportedOperationException("Native overlays are unavailable"); }
     /** SDK 1, overlay. Remove an overlay. Unknown keys are ignored. */
@@ -141,10 +160,30 @@ public interface PluginHost {
      */
     default boolean confirmSetup(String run, String title, String message, String confirmLabel) { throw new UnsupportedOperationException("Setup controls are unavailable"); }
     /**
-     * SDK 1. List the choices of a string setting declared with "choices": "plugin". The setting stores the ID.
-     * labels may be null, and a null label shows its ID. At most 200. The list lasts for this session.
+     * SDK 1. List the choices of a string setting or list row field declared with "choices": "plugin". The setting
+     * stores the ID. labels may be null, and a null label shows its ID. At most 200, with labels up to 80
+     * characters. key is the setting key or the dotted path of a list row field. KS keeps the latest list for each
+     * key, also across restarts, until the plugin lists that key again.
      */
     default void setSettingChoices(String key, String[] ids, String[] labels) { throw new UnsupportedOperationException("Setup controls are unavailable"); }
+    /**
+     * SDK 1, setup controls. Lists the choices of a string setting or list row field declared with "choices":
+     * "plugin". Each map holds id (required, 1 to 512 characters), label (up to 120, defaults to the id), group (up
+     * to 120, choices with the same group show under one heading, in the order groups first appear) and detail (up
+     * to 120, a secondary line), value (up to 40, shown on the right the way an entity shows its state), category (up to
+     * 40, the chips above the list filter by it) and icon (an MDI name such as "mdi:thermometer"). At most 2000
+     * choices. key is the setting key or the dotted
+     * path of a list row field, such as "panels.tiles.sensor".
+     */
+    default void setSettingChoices(String key, java.util.List<java.util.Map<String, Object>> choices) { throw new UnsupportedOperationException("Rich setting choices are unavailable"); }
+
+    /**
+     * SDK 1, setup controls. Turns a choices setting or list row field off or back on, such as while the device its
+     * choices come from cannot be reached. Off, its picker and its Refresh button do not open and the saved choice
+     * still shows. Every choice starts on in a new session. key is the setting key or the dotted path of a list row
+     * field, as for setSettingChoices.
+     */
+    default void setSettingChoicesEnabled(String key, boolean enabled) { throw new UnsupportedOperationException("Turning choices off is unavailable"); }
     /** SDK 1. Register or update an RGB light. Commands arrive as light.<key>. */
     default void publishLight(String key, String name, String[] effects, Map<String, Object> state) { throw new UnsupportedOperationException("SDK 1 required"); }
     default void removeLight(String key) { throw new UnsupportedOperationException("SDK 1 required"); }

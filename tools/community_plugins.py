@@ -20,6 +20,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -45,21 +46,25 @@ ALLOWED_HOSTS = {
 }
 CAPABILITIES = {
     'overlay', 'native', 'entities', 'host.read', 'host.control', 'shizuku',
-    'screensaver', 'noise', 'ha', 'voice.skin', 'voice.text', 'camera', 'barcode',
-    'ma',
+    'screensaver', 'screensaver.mode', 'noise', 'ha', 'voice.skin', 'voice.text', 'camera',
+    'barcode', 'ma',
 }
 SETTING_TYPES = {
     'string', 'secret', 'entity', 'icon', 'dashboard', 'cameraView', 'boolean',
-    'color', 'number', 'select', 'list',
+    'color', 'number', 'select', 'list', 'action',
 }
 ID_PATTERN = re.compile(r'[a-z][a-z0-9]*(?:-[a-z0-9]+)*')
 VERSION_PATTERN = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?')
+# A Kiosk Satellite release: year, month and the release within the month, without padding.
+APP_VERSION_PATTERN = re.compile(r'[0-9]{4}\.(?:[1-9]|1[0-2])\.(?:0|[1-9][0-9]{0,3})')
+APP_REPOSITORY = 'jxlarrea/kiosk-satellite'
 TAG_PATTERN = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,150}')
 REPOSITORY_PATTERN = re.compile(r'[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+')
 STEPS = [
     ('repository', 'Public repository with a license'),
     ('release', 'Stable release with assets published by GitHub Actions'),
     ('manifest', 'Manifest passes the SDK 1 checks'),
+    ('appVersion', 'Manifest names the oldest Kiosk Satellite release it works on'),
     ('package', 'Package matches its checksum and contains only plugin files'),
     ('readme', 'README.md at the release tag'),
     ('owner', 'Submitted by the repository owner'),
@@ -185,6 +190,9 @@ def validate_manifest(manifest):
     headless = manifest.get('headless')
     if headless is not None and not isinstance(headless, bool):
         raise ValueError('Invalid headless')
+    app_version = manifest.get('minAppVersion')
+    if app_version is not None and (not isinstance(app_version, str) or not APP_VERSION_PATTERN.fullmatch(app_version)):
+        raise ValueError('Invalid minAppVersion. Name a Kiosk Satellite release such as 2026.10.40')
     icon = manifest.get('icon')
     if icon is not None and (not isinstance(icon, str) or not valid_asset_path(icon) or not icon.lower().endswith('.png')):
         raise ValueError('Invalid icon. Name a PNG under assets/')
@@ -212,6 +220,8 @@ def validate_manifest(manifest):
             raise ValueError(f'Unsupported setting type for {key}')
         if setting.get('type') == 'secret' and setting.get('default') != '':
             raise ValueError('Secret settings must default to an empty string')
+        if setting.get('type') == 'action' and setting.get('default') != {}:
+            raise ValueError('Action settings must default to {}')
     for kind in ('commands', 'triggers', 'buttons'):
         ids = set()
         for item in manifest.get(kind, []):
@@ -435,6 +445,7 @@ def check_plugin(github, repository, previous=None):
         'tag': tag,
         'released': release.get('published_at'),
         'minAndroidSdk': manifest['minAndroidSdk'],
+        'minAppVersion': manifest.get('minAppVersion'),
         'headless': manifest.get('headless') is True,
         'capabilities': sorted(manifest['capabilities']),
         'repository': f'https://github.com/{full_name}',
@@ -451,12 +462,29 @@ def check_plugin(github, repository, previous=None):
     }
 
 
+# GitHub sometimes answers a release list with an empty page for a repository that has releases.
+RELEASE_LIST_ATTEMPTS = 4
+RELEASE_LIST_RETRY_SECONDS = 2.0
+
+
 def downloads(github, repository, plugin_id):
-    """Package downloads across every release. Updates count, fleet followers do not download."""
+    """Package downloads across every release. Updates count, fleet followers do not download.
+
+    None when GitHub keeps listing no releases: the caller has just read the latest release, so an
+    empty first page is a bad answer, not a plugin without downloads.
+    """
     total, page = 0, 1
     pattern = re.compile(re.escape(plugin_id) + r'-.+\.zip')
     while page <= 10:
-        releases = github.api(f'/repos/{repository}/releases?per_page=100&page={page}', 4 * 1024 * 1024)
+        path = f'/repos/{repository}/releases?per_page=100&page={page}'
+        releases = github.api(path, 4 * 1024 * 1024)
+        attempt = 1
+        while page == 1 and not releases and attempt < RELEASE_LIST_ATTEMPTS:
+            time.sleep(RELEASE_LIST_RETRY_SECONDS)
+            releases = github.api(path, 4 * 1024 * 1024)
+            attempt += 1
+        if page == 1 and not releases:
+            return None
         for release in releases:
             for item in release.get('assets', []):
                 if pattern.fullmatch(item.get('name', '')):
@@ -479,6 +507,22 @@ def save_list(entries, path=LIST_PATH):
     Path(path).write_text(json.dumps(entries, indent=2) + '\n')
 
 
+def app_version_problem(github, version):
+    """Why a submission's minAppVersion does not pass, or None. Listed plugins may go without one."""
+    if version is None:
+        return ('Add minAppVersion to kiosk-satellite-plugin.json with the oldest Kiosk Satellite release '
+                'the plugin works on, such as "2026.10.40"')
+    try:
+        release = github.api(f'/repos/{APP_REPOSITORY}/releases/tags/{version}')
+    except LookupError:
+        return f'Kiosk Satellite {version} is not a published release'
+    except (RuntimeError, OSError) as error:
+        return str(error)
+    if release.get('draft') is not False:
+        return f'Kiosk Satellite {version} is not a published release'
+    return None
+
+
 def check_submission(github, repository, author, maintainer, entries):
     """The checklist for one submission: (results, facts). Results map each step to None or its error."""
     results = {name: None for name, _ in STEPS}
@@ -492,6 +536,7 @@ def check_submission(github, repository, author, maintainer, entries):
         for name, _ in STEPS[index + 1:]:
             results[name] = 'Not checked'
         return results, None
+    results['appVersion'] = app_version_problem(github, facts['minAppVersion'])
     owner = facts['owner'] or ''
     if author.lower() not in (owner.lower(), maintainer.lower()) and not (
             facts['ownerType'] == 'Organization' and github.is_public_member(owner, author)):
@@ -586,7 +631,10 @@ def build_index(github, entries, previous=None, installs=None, now=None, icons=N
                 item['icon'] = icon_base + name
             elif unchanged and before and before.get('icon') and icons and (icons / before['icon'].rsplit('/', 1)[-1]).exists():
                 item['icon'] = before['icon']
-            item['downloads'] = downloads(github, entry['repository'], entry['id'])
+            # Downloads only grow, so a lower or missing count from GitHub keeps the last one.
+            counts = [c for c in (downloads(github, entry['repository'], entry['id']), (before or {}).get('downloads'))
+                      if isinstance(c, int)]
+            item['downloads'] = max(counts, default=0)
         except (CheckError, ValueError, RuntimeError, OSError) as error:
             # Keep what the last good run knew, so the listing still names the plugin.
             if before:
